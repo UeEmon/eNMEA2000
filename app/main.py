@@ -24,6 +24,7 @@ DATA.mkdir(parents=True, exist_ok=True)
 TOKEN = os.getenv('APP_TOKEN', '')
 SECURE = os.getenv('COOKIE_SECURE', 'false').lower() == 'true'
 UDP_PORT = int(os.getenv('UDP_PORT', '10110'))
+TCP_PORT = int(os.getenv('TCP_PORT', '10111'))
 MAX_FILE = int(os.getenv('MAX_FILE_MB', '100')) * 1024 * 1024
 ALLOW = [ipaddress.ip_network(v.strip()) for v in os.getenv('UDP_ALLOW_CIDRS', '').split(',') if v.strip()]
 
@@ -34,10 +35,12 @@ class Runtime:
         self.clients = set()
         self.jobs = {}
         self.tasks = set()
-        self.metrics = {'datagrams':0, 'queue_dropped':0, 'rejected_sources':0,
+        self.metrics = {'datagrams':0, 'tcp_connections':0, 'tcp_sentences':0,
+                        'queue_dropped':0, 'rejected_sources':0,
                         'socket_errors':0, 'db_errors':0, 'ws_dropped':0, 'last_received':None}
         self.enabled = True
         self.transport = None
+        self.tcp_server = None
         self.failed = False
 
     def publish(self, rows):
@@ -87,6 +90,38 @@ class UDP(asyncio.DatagramProtocol):
         self.state.metrics['socket_errors'] += 1
         log.error('UDP error: %s', exc)
 
+async def handle_tcp(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    peer = writer.get_extra_info('peername')
+    ip, port = peer[0], peer[1]
+    if ALLOW and not any(ipaddress.ip_address(ip) in net for net in ALLOW):
+        state.metrics['rejected_sources'] += 1
+        writer.close()
+        await writer.wait_closed()
+        return
+    state.metrics['tcp_connections'] += 1
+    source = f'tcp:{ip}:{port}'
+    try:
+        while True:
+            try:
+                line = await asyncio.wait_for(reader.readline(), timeout=120)
+            except (asyncio.TimeoutError, ValueError) as exc:
+                if isinstance(exc, ValueError): state.metrics['socket_errors'] += 1
+                break
+            if not line: break
+            if not state.enabled: continue
+            at = utcnow()
+            for raw in SENTENCE.findall(line.decode('ascii', errors='replace')) or [line.decode('ascii', errors='replace')]:
+                try:
+                    state.queue.put_nowait((raw[:8192], source, at))
+                    state.metrics['tcp_sentences'] += 1
+                    state.metrics['last_received'] = at
+                except asyncio.QueueFull:
+                    state.metrics['queue_dropped'] += 1
+    finally:
+        state.metrics['tcp_connections'] -= 1
+        writer.close()
+        await writer.wait_closed()
+
 state = Runtime()
 
 @asynccontextmanager
@@ -102,10 +137,13 @@ async def lifespan(app):
         state.jobs[job['id']] = job
     loop = asyncio.get_running_loop()
     state.transport, _ = await loop.create_datagram_endpoint(lambda: UDP(state), local_addr=('0.0.0.0', UDP_PORT))
+    state.tcp_server = await asyncio.start_server(handle_tcp, host='0.0.0.0', port=TCP_PORT, limit=16384)
     worker = asyncio.create_task(state.consume())
     try: yield
     finally:
         state.transport.close()
+        state.tcp_server.close()
+        await state.tcp_server.wait_closed()
         for task in list(state.tasks): task.cancel()
         await asyncio.gather(*state.tasks, return_exceptions=True)
         with contextlib.suppress(asyncio.TimeoutError): await asyncio.wait_for(state.queue.join(), 10)
@@ -148,13 +186,13 @@ async def index(): return FileResponse(Path(__file__).parent/'static/index.html'
 
 @app.get('/health')
 async def health():
-    return {'status':'ok', 'udp_port':UDP_PORT}
+    return {'status':'ok', 'udp_port':UDP_PORT, 'tcp_port':TCP_PORT}
 
 @app.get('/ready')
 async def ready():
     try:
         await asyncio.to_thread(state.store.recent, 1)
-        if state.transport.is_closing(): raise RuntimeError('UDP closed')
+        if state.transport.is_closing() or not state.tcp_server.is_serving(): raise RuntimeError('receiver closed')
     except Exception: raise HTTPException(503,'not ready')
     return {'status':'ok'}
 
@@ -177,6 +215,7 @@ async def stats():
     state.decoder.expire()
     return {**await asyncio.to_thread(state.store.stats), 'runtime':dict(state.metrics),
             'queue_size':state.queue.qsize(), 'udp_enabled':state.enabled, 'udp_port':UDP_PORT,
+            'tcp_port':TCP_PORT,
             'ais_pending':len(state.decoder.groups), 'ais_expired':state.decoder.expired}
 
 @app.post('/api/udp/{action}')

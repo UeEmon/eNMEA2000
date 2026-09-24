@@ -3,6 +3,7 @@
 ## 構成
 
 - **UDP：送信機器 → EC2 Elastic IP:10110 → Dockerアプリ**
+- **TCP：送信機器 → EC2 Elastic IP:10111 → 同じDockerアプリ**
 - **Web：ブラウザ → ALB HTTPS:443 → EC2:8080 → 同じDockerアプリ**
 - DB：同一EC2のPostgreSQLコンテナ。DBポートはホストに公開しません。
 - ファイル・DB：暗号化gp3 EBSの `/opt/nmea/raw` と `/opt/nmea/postgres`。
@@ -19,7 +20,7 @@ ALBはWeb用です。このテンプレートでUDPをALBに送信しても受�
 1. AWSアカウントとリージョン（例：ap-northeast-1）。
 2. 同一VPC内、異なるAZにある**インターネットゲートウェイへの経路があるパブリックサブネット2つ**。
 3. 同じリージョンで発行済みのACM証明書。そのドメイン名のDNSを変更できること。
-4. Webアクセス元のグローバルIPv4 CIDRとUDP送信元のグローバルIPv4 CIDR。
+4. Webアクセス元、UDP送信元、TCP送信元それぞれのグローバルIPv4 CIDR。
 5. Docker Desktop、Python 3.12、`boto3`、AWS認証情報。
 6. EC2/ALB/EIP/IAM/Secrets Manager/CloudWatch/CloudFormation/ECR作成権限と必要なクォータ。
 
@@ -33,7 +34,7 @@ NMEA機器がLAN内へしか送れない場合、そのLANの中継機器からA
 
 ```bash
 python -m pip install boto3
-python aws/deploy.py --region ap-northeast-1 --vpc vpc-XXXXXXXX --subnet-a subnet-AAAAAAAA --subnet-b subnet-BBBBBBBB --certificate arn:aws:acm:ap-northeast-1:ACCOUNT:certificate/CERT-ID --web-cidr YOUR-WEB-PUBLIC-IP/32 --udp-cidr YOUR-SENDER-PUBLIC-IP/32
+python aws/deploy.py --region ap-northeast-1 --vpc vpc-XXXXXXXX --subnet-a subnet-AAAAAAAA --subnet-b subnet-BBBBBBBB --certificate arn:aws:acm:ap-northeast-1:ACCOUNT:certificate/CERT-ID --web-cidr YOUR-WEB-PUBLIC-IP/32 --udp-cidr YOUR-SENDER-PUBLIC-IP/32 --tcp-cidr YOUR-TCP-SENDER-PUBLIC-IP/32
 ```
 
 上記は計画表示だけです。実際にリソース作成とイメージ公開を実行する場合は、同じコマンドに `--execute` を追加します。
@@ -57,7 +58,7 @@ AWS利用料金が発生します。金額はインスタンス・ALB・EIP・�
 3. スタック出力 `WebDnsTarget` に証明書のドメインのCNAMEまたはRoute 53 Aliasを向ける。
 4. `https://証明書のドメイン` を開く。ALBのDNS名そのものでは証明書の名前が一致しません。
 5. スタック出力 `AppTokenSecretArn` のSecret値をAWSコンソールで取得し、ログイン。
-6. UDPをスタック出力 `UdpHost` の10110番へ送信する。
+6. UDPをスタック出力 `UdpHost` の10110番、TCPを `TcpHost` の10111番へ送信する。
 7. ファイル解析と再起動後のデータ保持を確認する。
 
 CloudFormationの作成完了だけではアプリの稼働を保証しません。UserDataの成否はSession Managerで `/var/log/cloud-init-output.log`、`docker ps`、`docker logs nmea-app` から確認できます。
@@ -67,7 +68,7 @@ CloudFormationの作成完了だけではアプリの稼働を保証しません
 更新は新しいECRタグを作ってから、EC2上でアプリコンテナだけを再作成します。
 **CloudFormationのAppImage変更だけでは既存EC2のUserData再実行を保証しないため、アプリ更新には使わないでください。**
 更新前にバックアップを取得し、起動条件はbootstrap.shの `docker run ... nmea-app` と同一にしてください。
-単一受信器のため再作成中のUDPは失われます。送信側のバッファリング／リプレイは別途必要です。
+単一受信器のため再作成中のUDP/TCPセンテンスは失われます。送信側のバッファリング／リプレイは別途必要です。
 DBスキーマ変更を含む更新には、別途移行手順が必要です。この初期版にはDB移行ツールを含めていません。
 
 EBSルートボリュームは `DeleteOnTermination=false`、Secretsは `Retain` です。

@@ -9,12 +9,12 @@ from datetime import datetime, timezone
 import boto3
 from botocore.exceptions import ClientError
 p=argparse.ArgumentParser()
-for name in ['region','vpc','subnet-a','subnet-b','certificate','web-cidr','udp-cidr']:
+for name in ['region','vpc','subnet-a','subnet-b','certificate','web-cidr','udp-cidr','tcp-cidr']:
     p.add_argument('--'+name,required=True)
 p.add_argument('--stack',default='nmea-observatory')
 p.add_argument('--execute',action='store_true',help='Actually create AWS resources and publish the image')
 a=p.parse_args()
-for cidr in [a.web_cidr,a.udp_cidr]: ipaddress.IPv4Network(cidr)
+for cidr in [a.web_cidr,a.udp_cidr,a.tcp_cidr]: ipaddress.IPv4Network(cidr)
 if a.subnet_a==a.subnet_b: p.error('Use two subnets in different Availability Zones')
 root=Path(__file__).resolve().parents[1]
 print('Plan: build linux/amd64 image, publish ECR, create EC2 + PostgreSQL + ALB + EIP + secrets.')
@@ -48,7 +48,7 @@ image=f'{registry}/nmea-observatory:{tag}'
 subprocess.run(['docker','buildx','build','--platform','linux/amd64','--load','-t',image,str(root)],check=True)
 subprocess.run(['docker','push',image],check=True)
 params={'VpcId':a.vpc,'SubnetA':a.subnet_a,'SubnetB':a.subnet_b,'CertificateArn':a.certificate,
-        'WebCidr':a.web_cidr,'UdpCidr':a.udp_cidr,'AppImage':image}
+        'WebCidr':a.web_cidr,'UdpCidr':a.udp_cidr,'TcpCidr':a.tcp_cidr,'AppImage':image}
 response=cf.create_stack(StackName=a.stack,TemplateBody=template,
     Parameters=[{'ParameterKey':k,'ParameterValue':v} for k,v in params.items()],Capabilities=['CAPABILITY_IAM'])
 print('Stack creation started:',response['StackId'])

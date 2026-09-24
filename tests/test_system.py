@@ -48,8 +48,10 @@ def client(tmp_path_factory):
     root=tmp_path_factory.mktemp('server')
     with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as s:
         s.bind(('127.0.0.1',0)); port=s.getsockname()[1]
+    with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as tcp:
+        tcp.bind(('127.0.0.1',0)); tcp_port=tcp.getsockname()[1]
     os.environ.update(APP_TOKEN='test-token-with-at-least-24-chars',DATA_DIR=str(root),
-                      DATABASE_URL=f'sqlite:///{root}/test.db',UDP_PORT=str(port))
+                      DATABASE_URL=f'sqlite:///{root}/test.db',UDP_PORT=str(port),TCP_PORT=str(tcp_port))
     import app.main as main
     from fastapi.testclient import TestClient
     with TestClient(main.app) as c: yield c,main,port
@@ -103,3 +105,27 @@ def test_upload_limit_and_pause(client):
     time.sleep(.05)
     assert c.get('/api/stats').json()['runtime']['datagrams']==before
     c.post('/api/udp/start')
+
+def test_emulator_tcp_end_to_end(client):
+    c,main,_=client;login(c)
+    import sys
+    from pathlib import Path
+    sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'emulator'))
+    from server import Simulator
+    emulator=Simulator()
+    emulator.config.interval=.2
+    frames=emulator.generate()
+    assert any(line.startswith('!AIVDM') for line in frames)
+    with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as sock:
+        sock.connect(('127.0.0.1',main.TCP_PORT))
+        sock.sendall(('\r\n'.join(frames)+'\r\n').encode())
+        for _ in range(200):
+            if c.get('/api/stats').json()['runtime']['tcp_sentences']>=len(frames):break
+            time.sleep(.01)
+    for _ in range(200):
+        events=c.get('/api/events?limit=100').json()
+        if any(r['source'].startswith('tcp:') and r['mmsi']=='431234567' for r in events):break
+        time.sleep(.01)
+    assert any(r['source'].startswith('tcp:') and r['sentence_type']=='RMC' and r['latitude'] for r in events)
+    assert any(r['source'].startswith('tcp:') and r['sentence_type']=='VDM' and r['mmsi']=='431234567' for r in events)
+    assert c.get('/health').json()['tcp_port']==main.TCP_PORT

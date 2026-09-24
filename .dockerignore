@@ -6,4 +6,6 @@ __pycache__
 data
 tests
 aws
+web/node_modules
+app/static/cesium
 *.zip

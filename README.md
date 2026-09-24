@@ -1,7 +1,8 @@
 # NMEA Observatory — NMEA0183解析Webシステム
 
 AWS運用とDocker Desktopでの確認に対応する初期実装です。
-UDP受信・ファイル解析・データ保存・WebSocketライブ表示に共通の解析エンジンを使います。
+UDP/TCP受信・ファイル解析・データ保存・WebSocketライブ表示に共通の解析エンジンを使います。
+GIS表示にはCesiumJSを使用し、配布イメージに組み込んだNatural Earthの背景図を表示します。
 画面は日本語で、PC／スマートフォンの両方に対応します。
 
 ## 1. Docker Desktopで起動
@@ -26,7 +27,7 @@ bash start.sh
 
 Pythonが端末に入っていなくても起動スクリプトを利用できます。
 コマンドが失敗した場合は、`docker compose logs --tail=100` で確認してください。
-Webは既定で端末内のみ、UDPは端末の全IPv4インターフェースで待ち受けます。
+Webは既定で端末内のみ、UDP 10110とTCP 10111は端末の全IPv4インターフェースで待ち受けます。
 LAN内の別端末から画面を確認する場合、`.env` の `WEB_BIND=0.0.0.0` に変更して再起動してください。
 AWSではHTTPSを使用します。
 
@@ -56,8 +57,9 @@ docker compose --profile demo stop simulator
 python scripts/send_udp.py --host 127.0.0.1 --repeat
 ```
 
-外部NMEA機器からは、**Docker Desktop端末のLAN側IPアドレス、UDP 10110** にユニキャスト送信します。
-端末のファイアウォールで、対象ネットワークからのUDP 10110受信を許可してください。
+外部NMEA機器からは、**Docker Desktop端末のLAN側IPアドレス、UDP 10110またはTCP 10111** にユニキャスト送信します。
+TCPでは改行（CRLFまたはLF）で区切ったNMEAセンテンスを送ります。1接続を保持して複数文を送信できます。
+端末のファイアウォールで、利用するプロトコルのUDP 10110またはTCP 10111受信を許可してください。
 初期版ではブロードキャスト／マルチキャスト参加は実装していません。
 
 ファイル解析は画面で `samples/demo.log` を選択します。
@@ -69,13 +71,14 @@ python scripts/send_udp.py --host 127.0.0.1 --repeat
 | 機能 | 動作 |
 |---|---|
 | UDP | 10110/UDP、送信元ごとの処理、有界キュー、受信停止・再開 |
+| TCP | 10111/TCP、改行区切りのセンテンス、有界読み取り、再接続元別の処理 |
 | NMEA | チェックサム検証、pynmea2による対応センテンス解析、GP/GN等のトーカ識別 |
 | 位置 | GGA/RMC/GLL等の有効位置、RMCから日付付きUTC時刻を抽出 |
 | AIS | pyaisで対応するVDM/VDOを解析。1/2/3/5/18/19/21/24等を含む。分割再構成とタイムアウト |
 | ファイル | 最大100 MB、同時2件、進捗・停止・結果保持。行単位のTXT/LOG/NMEA/CSV内のセンテンス抽出 |
 | 記録 | 元センテンス、受信・解析時刻、送信元、チェックサム結果、解析属性、位置、MMSI |
 | データベース | Docker/AWSはPostgreSQL 17。軽量テスト用にSQLiteにも対応 |
-| 画面 | 受信統計、最新500件、入力／文字列フィルター、解析詳細、位置・航跡プロット |
+| 画面 | 受信統計、最新500件、入力／文字列フィルター、解析詳細、Cesiumの位置・航跡・針路ベクトル |
 | 配信 | WebSocket。切断後の再接続、配信遅延時の最新履歴再取得 |
 | 出力 | JSONL全項目、GeoJSON位置情報。APIでsource/MMSIによる絞り込み可 |
 | 認証 | ランダムトークンでログイン、有効期限12時間の署名Cookie、Origin検査 |
@@ -98,7 +101,9 @@ AIVDM/AIVDO Type 6/8等のアプリケーション固有バイナリは、ライ
 - ファイルは入力順に処理します。UTC日時のないデータを恣意的に時刻ソートしません。
 - UDPの欠落数はNMEA文字列だけでは確定できません。画面の破棄数はアプリのキュー上限／DB失敗／配信破棄で検知できた分です。
 - 元データ保存後に画面へ配信します。ブラウザは最新500件だけ保持し、GeoJSON/JSONLはDBの履歴を逐次出力します。
-- 位置画面は簡易座標プロットです。海図・背景地図・正しい距離縮尺を提供するGISではなく、日付変更線をまたぐ航跡には未対応です。
+- Cesiumの地球にNatural Earthの背景図を表示します。海図ではなく、距離や航行判断に利用できません。日付変更線をまたぐ航跡の分割処理は未対応です。
+- Cesiumの実行ファイルと背景図はDockerイメージに同梱します。Cesium ionのアカウントは不要です。
+- TCPとUDPには共通の受信停止スイッチと送信元CIDR制限を適用します。TCPは切断後の自動再送を提供しません。
 
 ## 5. 起動・停止・保存
 
@@ -133,13 +138,38 @@ docker compose start app
 既存データのあるDBへ上書きするコマンドは含めていません。復元先は別の新規環境を使ってください。
 保存期限・自動パージは初期版では未実装です。空き容量を監視して定期的にバックアップしてください。
 
-## 6. AWSへの配置
+## 6. 独立したTCPエミュレータで確認
+
+本体を起動したまま、別のターミナルで次を実行します。エミュレータは別のComposeプロジェクト、別のネットワーク、別のイメージです。
+
+```bash
+docker compose -f emulator/compose.yaml up -d --build --wait
+```
+
+`http://localhost:8090` を開き、緯度・経度・速度・針路・AIS船舶数・送信間隔を指定して「送信開始」を選びます。
+送信先は `host.docker.internal:10111` です。Docker Desktopのホスト公開ポートを通って本体へTCP接続します。
+画面の「TCP接続中」を確認し、本体の `http://localhost:8080` にAISとGPSが表示されることを確認してください。
+エミュレータの画面は既定でホスト自身からしか開けません。別のホストへ接続する場合は、エミュレータ起動前に `NMEA_TARGET_HOST` と `NMEA_TARGET_PORT` を指定します。
+
+端末のPythonで端末間の自動連接確認を実行できます。
+
+```bash
+python scripts/smoke_emulator.py
+```
+
+停止：
+
+```bash
+docker compose -f emulator/compose.yaml down
+```
+
+## 7. AWSへの配置
 
 詳細は [aws/README.md](aws/README.md) を参照してください。
 AWS側も同じDockerイメージ・同じPostgreSQLメジャーバージョンを使います。
 この配布物はAWSのリソースを自動で作成したものではなく、構築に必要なコードを含むものです。
 
-## 7. 開発・テスト
+## 8. 開発・テスト
 
 Python 3.12で：
 
@@ -152,20 +182,21 @@ python -m pytest -q
 cfn-lint aws/cloudformation.json
 ```
 
-テストはSQLiteを使用し、UDPソケット、WebSocket、ファイル入力、永続化を確認します。
+PythonのテストはSQLiteを使用し、UDP/TCPソケット、WebSocket、ファイル入力、永続化を確認します。GitHub ActionsはPostgreSQLと2つのComposeプロジェクトで連接試験を行います。
 Docker Desktop／PostgreSQL／AWSでの実行結果と区別した検証記録は [VERIFICATION.md](VERIFICATION.md) に記載しています。
 
-## 8. 初期版の範囲外
+## 9. 初期版の範囲外
 
-背景地図、KML/KMZ/CZML、履歴アニメーション、AIS静的情報の船舶マスタへの統合、国籍別統計、複数UDPポート、複数ユーザー権限、保存期間の自動管理、高可用性、10万隻規模の性能保証は次段階です。
+海図・オンライン地形、KML/KMZ/CZML、履歴アニメーション、AIS静的情報の船舶マスタへの統合、国籍別統計、複数UDPポート、複数ユーザー権限、保存期間の自動管理、高可用性、10万隻規模の性能保証は次段階です。
 AIS Type 24のPart A/Bは個別イベントとして保持し、船舶マスタへの統合は未実装です。
 再起動時にAISの未完了断片は保持しません。
 
-## 9. 参照資料
+## 10. 参照資料
 
 - [Dockerポート公開](https://docs.docker.com/engine/network/port-publishing/)
 - [AWS ALBリスナーとWebSocket](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-listeners.html)
 - [AWS Network Load BalancerのUDP対応](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-listeners.html)
+- [CesiumJS](https://cesium.com/learn/cesiumjs-learn/cesiumjs-quickstart/)
 - [pyais](https://github.com/M0r13n/pyais)
 - [FastAPI](https://fastapi.tiangolo.com/)
 

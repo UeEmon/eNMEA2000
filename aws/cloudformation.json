@@ -39,6 +39,10 @@
     "AmiId": {
       "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
       "Default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+    },
+    "TcpCidr": {
+      "Type": "String",
+      "Description": "NMEA TCP sender source IPv4 CIDR"
     }
   },
   "Resources": {
@@ -113,6 +117,14 @@
             "ToPort": 8080,
             "SourceSecurityGroupId": {
               "Ref": "WebSG"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 10111,
+            "ToPort": 10111,
+            "CidrIp": {
+              "Ref": "TcpCidr"
             }
           }
         ]
@@ -258,7 +270,7 @@
         ],
         "UserData": {
           "Fn::Base64": {
-            "Fn::Sub": "#!/bin/bash\nset -euo pipefail\ndnf install -y docker\nsystemctl enable --now docker\ninstall -d -m 700 /opt/nmea\ninstall -d -o 10001 -g 10001 /opt/nmea/raw\ninstall -d /opt/nmea/postgres\naws secretsmanager get-secret-value --region '${AWS::Region}' --secret-id '${AppSecret}' --query SecretString --output text > /opt/nmea/app.secret\naws secretsmanager get-secret-value --region '${AWS::Region}' --secret-id '${DbSecret}' --query SecretString --output text > /opt/nmea/db.secret\nchmod 600 /opt/nmea/*.secret\npython3 - <<'PY'\nfrom pathlib import Path\nroot=Path('/opt/nmea')\ntoken=(root/'app.secret').read_text().strip()\npassword=(root/'db.secret').read_text().strip()\n(root/'app.env').write_text('APP_TOKEN='+token+'\\nDATABASE_URL=postgresql+psycopg://nmea:'+password+'@nmea-db:5432/nmea\\nDATA_DIR=/data\\nCOOKIE_SECURE=true\\n')\n(root/'db.env').write_text('POSTGRES_DB=nmea\\nPOSTGRES_USER=nmea\\nPOSTGRES_PASSWORD='+password+'\\n')\nfor name in ['app.env','db.env']: (root/name).chmod(0o600)\n(root/'app.secret').unlink();(root/'db.secret').unlink()\nPY\naws ecr get-login-password --region '${AWS::Region}' | docker login --username AWS --password-stdin '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com'\ndocker network create nmea\ndocker pull '${AppImage}'\ndocker pull postgres:17-bookworm\ndocker run -d --name nmea-db --network nmea --restart unless-stopped --env-file /opt/nmea/db.env --mount type=bind,source=/opt/nmea/postgres,target=/var/lib/postgresql/data --log-opt max-size=10m --log-opt max-file=3 postgres:17-bookworm\nready=0\nfor attempt in $(seq 1 60); do\n  if docker exec nmea-db pg_isready -U nmea -d nmea; then ready=1; break; fi\n  sleep 2\ndone\n[ \"$ready\" = 1 ]\ndocker run -d --name nmea-app --network nmea --restart unless-stopped --init --env-file /opt/nmea/app.env --mount type=bind,source=/opt/nmea/raw,target=/data -p 8080:8080/tcp -p 10110:10110/udp --log-driver awslogs --log-opt awslogs-region='${AWS::Region}' --log-opt awslogs-group='${LogGroup}' --log-opt awslogs-stream=app --log-opt mode=non-blocking --log-opt max-buffer-size=4m '${AppImage}'\n"
+            "Fn::Sub": "#!/bin/bash\nset -euo pipefail\ndnf install -y docker\nsystemctl enable --now docker\ninstall -d -m 700 /opt/nmea\ninstall -d -o 10001 -g 10001 /opt/nmea/raw\ninstall -d /opt/nmea/postgres\naws secretsmanager get-secret-value --region '${AWS::Region}' --secret-id '${AppSecret}' --query SecretString --output text > /opt/nmea/app.secret\naws secretsmanager get-secret-value --region '${AWS::Region}' --secret-id '${DbSecret}' --query SecretString --output text > /opt/nmea/db.secret\nchmod 600 /opt/nmea/*.secret\npython3 - <<'PY'\nfrom pathlib import Path\nroot=Path('/opt/nmea')\ntoken=(root/'app.secret').read_text().strip()\npassword=(root/'db.secret').read_text().strip()\n(root/'app.env').write_text('APP_TOKEN='+token+'\\nDATABASE_URL=postgresql+psycopg://nmea:'+password+'@nmea-db:5432/nmea\\nDATA_DIR=/data\\nCOOKIE_SECURE=true\\n')\n(root/'db.env').write_text('POSTGRES_DB=nmea\\nPOSTGRES_USER=nmea\\nPOSTGRES_PASSWORD='+password+'\\n')\nfor name in ['app.env','db.env']: (root/name).chmod(0o600)\n(root/'app.secret').unlink();(root/'db.secret').unlink()\nPY\naws ecr get-login-password --region '${AWS::Region}' | docker login --username AWS --password-stdin '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com'\ndocker network create nmea\ndocker pull '${AppImage}'\ndocker pull postgres:17-bookworm\ndocker run -d --name nmea-db --network nmea --restart unless-stopped --env-file /opt/nmea/db.env --mount type=bind,source=/opt/nmea/postgres,target=/var/lib/postgresql/data --log-opt max-size=10m --log-opt max-file=3 postgres:17-bookworm\nready=0\nfor attempt in $(seq 1 60); do\n  if docker exec nmea-db pg_isready -U nmea -d nmea; then ready=1; break; fi\n  sleep 2\ndone\n[ \"$ready\" = 1 ]\ndocker run -d --name nmea-app --network nmea --restart unless-stopped --init --env-file /opt/nmea/app.env --mount type=bind,source=/opt/nmea/raw,target=/data -p 8080:8080/tcp -p 10110:10110/udp -p 10111:10111/tcp --log-driver awslogs --log-opt awslogs-region='${AWS::Region}' --log-opt awslogs-group='${LogGroup}' --log-opt awslogs-stream=app --log-opt mode=non-blocking --log-opt max-buffer-size=4m '${AppImage}'\n"
           }
         }
       }
@@ -378,6 +390,11 @@
     "TargetGroupArn": {
       "Value": {
         "Ref": "Target"
+      }
+    },
+    "TcpHost": {
+      "Value": {
+        "Ref": "UdpAddress"
       }
     }
   }

@@ -8,6 +8,7 @@ services:
     ports:
       - "${WEB_BIND:-127.0.0.1}:8080:8080/tcp"
       - "${UDP_BIND:-0.0.0.0}:10110:10110/udp"
+      - "${TCP_BIND:-0.0.0.0}:10111:10111/tcp"
     environment:
       APP_TOKEN: ${APP_TOKEN:?Run setup first}
       DATABASE_URL: postgresql+psycopg://nmea:${POSTGRES_PASSWORD:?Run setup first}@db:5432/nmea

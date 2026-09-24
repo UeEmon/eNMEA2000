@@ -28,4 +28,8 @@ for _ in range(100):
 else: raise AssertionError('File import timed out')
 assert found['ok']>0
 assert req('/api/export/geojson')['type']=='FeatureCollection'
-print('PASS: login, UDP, file import, database read, GeoJSON')
+with opener.open(base+'/static/cesium/Cesium.js',timeout=15) as response:
+    assert response.status == 200 and response.read(50)
+with opener.open(base+'/static/cesium/Assets/Textures/NaturalEarthII/tilemapresource.xml',timeout=15) as response:
+    assert response.status == 200
+print('PASS: login, UDP, file import, database read, GeoJSON, Cesium assets')

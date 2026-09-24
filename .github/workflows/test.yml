@@ -24,7 +24,11 @@ jobs:
       - run: python scripts/setup.py
       - run: docker compose up -d --build --wait
       - run: docker compose exec -T app python scripts/smoke.py
+      - run: docker compose -f emulator/compose.yaml up -d --build --wait
+      - run: python scripts/smoke_emulator.py
       - if: always()
         run: docker compose logs --tail=100
+      - if: always()
+        run: docker compose -f emulator/compose.yaml down
       - if: always()
         run: docker compose down
