@@ -1,7 +1,9 @@
 name: nmea-emulator
 services:
   emulator:
-    build: .
+    build:
+      context: ..
+      dockerfile: emulator/Dockerfile
     restart: unless-stopped
     init: true
     ports:
