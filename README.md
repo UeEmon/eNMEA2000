@@ -20,6 +20,14 @@ macOS／Linux：
 bash start.sh
 ```
 
+macOSで本体・独立TCPエミュレータをまとめて構築し、DB保存まで自動確認する場合は、リポジトリのルートから次を実行します。ホスト側のPythonは不要です。Docker Desktopを起動してから実行してください。
+
+```bash
+bash verify-macos.sh
+```
+
+成功すると本体 `http://localhost:8080`、エミュレータ `http://localhost:8090` が利用できます。`.env` の `APP_TOKEN` で本体にログインします。スクリプトの試験では疑似データを送信・保存するため、検証用のDBで実行してください。M1/M2/M3/M4系MacとIntel MacではDocker Desktopの各CPU向けLinuxコンテナを使用します。終了時は `docker compose -f emulator/compose.yaml down` と `docker compose down` を実行します（データを残す場合、`-v` は付けません）。端末のDocker Desktop上での実動作は端末で確認してください。
+
 1. 初回のみイメージのダウンロードとビルドを行います。インターネット接続が必要です。
 2. `http://localhost:8080` を開きます。
 3. 自動生成された `.env` の `APP_TOKEN=` 以降をログイン画面に入力します。

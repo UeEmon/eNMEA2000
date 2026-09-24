@@ -1,13 +1,14 @@
 """End-to-end check across two independent Compose projects on the same host."""
 import http.cookiejar
 import json
+import os
 from pathlib import Path
 import time
 import urllib.request
 
-app='http://127.0.0.1:8080'
-emulator='http://127.0.0.1:8090'
-token=next(line.split('=',1)[1].strip() for line in Path('.env').read_text().splitlines() if line.startswith('APP_TOKEN='))
+app=os.getenv('NMEA_SMOKE_APP_URL','http://127.0.0.1:8080')
+emulator=os.getenv('NMEA_SMOKE_EMULATOR_URL','http://127.0.0.1:8090')
+token=os.getenv('APP_TOKEN') or next(line.split('=',1)[1].strip() for line in Path('.env').read_text().splitlines() if line.startswith('APP_TOKEN='))
 client=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 def request(url, body=None):
     r=urllib.request.Request(url, data=json.dumps(body).encode() if body is not None else None,
