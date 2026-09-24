@@ -7,9 +7,9 @@
 | Python 3.12 pytest | 9件成功。UDP実ソケット、WebSocket、ファイル入力、AIS分割と期限切れ、GPS、JSONL/GeoJSON、ログイン、SQLite永続化 |
 | Pythonコンパイル・JS構文・bash構文 | 成功 |
 | CloudFormation cfn-lint | 成功。テンプレートの静的検証 |
-| GitHub Actions | PRに定義。GitHub上での結果を確認するまで未検証 |
-| Docker Compose実行 | この実行環境にDocker Engineがないため未実施。端末のDocker Desktopで `docker compose up -d --build --wait` と `docker compose exec app python scripts/smoke.py` が必要 |
-| PostgreSQL結合 | Dockerスモークで検証予定。この環境のpytestはSQLiteを使用 |
+| GitHub Actions | PR #1の初回実行でPythonジョブとDockerジョブがともに成功。DockerジョブではPostgreSQL、UDP、ファイル解析、GeoJSONのスモーク試験を実行 |
+| Docker Compose実行 | GitHub ActionsのUbuntu上で起動・スモーク成功。この実行環境にはDocker Engineがなく、ユーザー端末のDocker Desktopでの確認は未実施 |
+| PostgreSQL結合 | GitHub ActionsのDockerスモークで成功。この環境のpytestはSQLiteを使用 |
 | AWS実デプロイ | 認証されたAWSアカウント、VPC、2つのサブネット、ACM証明書、許可するCIDRが未指定のため未実施 |
 | ブラウザ視覚検証 | Playwright用ブラウザ実体を取得できず未実施。JavaScript構文検査は成功 |
 
