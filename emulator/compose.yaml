@@ -1,0 +1,18 @@
+name: nmea-emulator
+services:
+  emulator:
+    build:
+      context: ..
+      dockerfile: emulator/Dockerfile
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${EMULATOR_WEB_BIND:-127.0.0.1}:8090:8090/tcp"
+    environment:
+      NMEA_TARGET_HOST: ${NMEA_TARGET_HOST:-host.docker.internal}
+      NMEA_TARGET_PORT: ${NMEA_TARGET_PORT:-10111}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}

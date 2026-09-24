@@ -1,0 +1,52 @@
+name: nmea-observatory
+services:
+  app:
+    build: .
+    image: nmea-observatory:local
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${WEB_BIND:-127.0.0.1}:8080:8080/tcp"
+      - "${UDP_BIND:-0.0.0.0}:10110:10110/udp"
+      - "${TCP_BIND:-0.0.0.0}:10111:10111/tcp"
+    environment:
+      APP_TOKEN: ${APP_TOKEN:?Run setup first}
+      DATABASE_URL: postgresql+psycopg://nmea:${POSTGRES_PASSWORD:?Run setup first}@db:5432/nmea
+      DATA_DIR: /data
+      COOKIE_SECURE: "false"
+      UDP_ALLOW_CIDRS: ${UDP_ALLOW_CIDRS:-}
+    volumes:
+      - raw-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nmea
+      POSTGRES_USER: nmea
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run setup first}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nmea -d nmea"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  simulator:
+    image: nmea-observatory:local
+    profiles: [demo]
+    depends_on:
+      app:
+        condition: service_healthy
+    command: ["python", "scripts/send_udp.py", "--host", "app", "--repeat", "--interval", "1"]
+volumes:
+  postgres-data:
+  raw-data:
