@@ -1,0 +1,384 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "NMEA initial single-node deployment: EC2 Docker + PostgreSQL + HTTPS ALB. Existing public subnets required.",
+  "Parameters": {
+    "VpcId": {
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "SubnetA": {
+      "Type": "AWS::EC2::Subnet::Id"
+    },
+    "SubnetB": {
+      "Type": "AWS::EC2::Subnet::Id"
+    },
+    "WebCidr": {
+      "Type": "String",
+      "Description": "Browser source IPv4 CIDR (public egress IP /32 recommended)"
+    },
+    "UdpCidr": {
+      "Type": "String",
+      "Description": "NMEA sender source IPv4 CIDR"
+    },
+    "CertificateArn": {
+      "Type": "String",
+      "AllowedPattern": "arn:aws:acm:.*"
+    },
+    "AppImage": {
+      "Type": "String",
+      "AllowedPattern": "[0-9]{12}\\.dkr\\.ecr\\.[a-z0-9-]+\\.amazonaws\\.com/nmea-observatory:[a-zA-Z0-9_.-]+"
+    },
+    "InstanceType": {
+      "Type": "String",
+      "Default": "t3.small",
+      "AllowedValues": [
+        "t3.small",
+        "t3.medium",
+        "t3.large"
+      ]
+    },
+    "AmiId": {
+      "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+      "Default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+    }
+  },
+  "Resources": {
+    "AppSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": "NMEA web login token",
+        "GenerateSecretString": {
+          "PasswordLength": 48,
+          "ExcludePunctuation": true
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "DbSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": "NMEA database password",
+        "GenerateSecretString": {
+          "PasswordLength": 40,
+          "ExcludePunctuation": true
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "LogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "RetentionInDays": 14
+      }
+    },
+    "WebSG": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "HTTPS from approved clients",
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": {
+              "Ref": "WebCidr"
+            }
+          }
+        ]
+      }
+    },
+    "AppSG": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "NMEA UDP and ALB HTTP",
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "udp",
+            "FromPort": 10110,
+            "ToPort": 10110,
+            "CidrIp": {
+              "Ref": "UdpCidr"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 8080,
+            "ToPort": 8080,
+            "SourceSecurityGroupId": {
+              "Ref": "WebSG"
+            }
+          }
+        ]
+      }
+    },
+    "Role": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
+          }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "nmea-runtime",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "secretsmanager:GetSecretValue"
+                  ],
+                  "Resource": [
+                    {
+                      "Ref": "AppSecret"
+                    },
+                    {
+                      "Ref": "DbSecret"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ecr:GetAuthorizationToken"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ecr:BatchGetImage",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:BatchCheckLayerAvailability"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/nmea-observatory"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "LogGroup",
+                      "Arn"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "Profile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "Role"
+          }
+        ]
+      }
+    },
+    "Server": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": {
+          "Ref": "AmiId"
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "IamInstanceProfile": {
+          "Ref": "Profile"
+        },
+        "MetadataOptions": {
+          "HttpTokens": "required",
+          "HttpPutResponseHopLimit": 1
+        },
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "SubnetId": {
+              "Ref": "SubnetA"
+            },
+            "AssociatePublicIpAddress": true,
+            "GroupSet": [
+              {
+                "Ref": "AppSG"
+              }
+            ]
+          }
+        ],
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/xvda",
+            "Ebs": {
+              "VolumeType": "gp3",
+              "VolumeSize": 40,
+              "Encrypted": true,
+              "DeleteOnTermination": false
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-server"
+            }
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Sub": "#!/bin/bash\nset -euo pipefail\ndnf install -y docker\nsystemctl enable --now docker\ninstall -d -m 700 /opt/nmea\ninstall -d -o 10001 -g 10001 /opt/nmea/raw\ninstall -d /opt/nmea/postgres\naws secretsmanager get-secret-value --region '${AWS::Region}' --secret-id '${AppSecret}' --query SecretString --output text > /opt/nmea/app.secret\naws secretsmanager get-secret-value --region '${AWS::Region}' --secret-id '${DbSecret}' --query SecretString --output text > /opt/nmea/db.secret\nchmod 600 /opt/nmea/*.secret\npython3 - <<'PY'\nfrom pathlib import Path\nroot=Path('/opt/nmea')\ntoken=(root/'app.secret').read_text().strip()\npassword=(root/'db.secret').read_text().strip()\n(root/'app.env').write_text('APP_TOKEN='+token+'\\nDATABASE_URL=postgresql+psycopg://nmea:'+password+'@nmea-db:5432/nmea\\nDATA_DIR=/data\\nCOOKIE_SECURE=true\\n')\n(root/'db.env').write_text('POSTGRES_DB=nmea\\nPOSTGRES_USER=nmea\\nPOSTGRES_PASSWORD='+password+'\\n')\nfor name in ['app.env','db.env']: (root/name).chmod(0o600)\n(root/'app.secret').unlink();(root/'db.secret').unlink()\nPY\naws ecr get-login-password --region '${AWS::Region}' | docker login --username AWS --password-stdin '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com'\ndocker network create nmea\ndocker pull '${AppImage}'\ndocker pull postgres:17-bookworm\ndocker run -d --name nmea-db --network nmea --restart unless-stopped --env-file /opt/nmea/db.env --mount type=bind,source=/opt/nmea/postgres,target=/var/lib/postgresql/data --log-opt max-size=10m --log-opt max-file=3 postgres:17-bookworm\nready=0\nfor attempt in $(seq 1 60); do\n  if docker exec nmea-db pg_isready -U nmea -d nmea; then ready=1; break; fi\n  sleep 2\ndone\n[ \"$ready\" = 1 ]\ndocker run -d --name nmea-app --network nmea --restart unless-stopped --init --env-file /opt/nmea/app.env --mount type=bind,source=/opt/nmea/raw,target=/data -p 8080:8080/tcp -p 10110:10110/udp --log-driver awslogs --log-opt awslogs-region='${AWS::Region}' --log-opt awslogs-group='${LogGroup}' --log-opt awslogs-stream=app --log-opt mode=non-blocking --log-opt max-buffer-size=4m '${AppImage}'\n"
+          }
+        }
+      }
+    },
+    "UdpAddress": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc",
+        "InstanceId": {
+          "Ref": "Server"
+        }
+      }
+    },
+    "LoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+      "Properties": {
+        "Type": "application",
+        "Scheme": "internet-facing",
+        "Subnets": [
+          {
+            "Ref": "SubnetA"
+          },
+          {
+            "Ref": "SubnetB"
+          }
+        ],
+        "SecurityGroups": [
+          {
+            "Ref": "WebSG"
+          }
+        ],
+        "LoadBalancerAttributes": [
+          {
+            "Key": "idle_timeout.timeout_seconds",
+            "Value": "120"
+          }
+        ]
+      }
+    },
+    "Target": {
+      "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "Port": 8080,
+        "Protocol": "HTTP",
+        "TargetType": "instance",
+        "HealthCheckPath": "/ready",
+        "Targets": [
+          {
+            "Id": {
+              "Ref": "Server"
+            },
+            "Port": 8080
+          }
+        ],
+        "TargetGroupAttributes": [
+          {
+            "Key": "deregistration_delay.timeout_seconds",
+            "Value": "30"
+          }
+        ]
+      }
+    },
+    "Listener": {
+      "Type": "AWS::ElasticLoadBalancingV2::Listener",
+      "Properties": {
+        "LoadBalancerArn": {
+          "Ref": "LoadBalancer"
+        },
+        "Port": 443,
+        "Protocol": "HTTPS",
+        "Certificates": [
+          {
+            "CertificateArn": {
+              "Ref": "CertificateArn"
+            }
+          }
+        ],
+        "SslPolicy": "ELBSecurityPolicy-TLS13-1-2-2021-06",
+        "DefaultActions": [
+          {
+            "Type": "forward",
+            "TargetGroupArn": {
+              "Ref": "Target"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "UdpHost": {
+      "Value": {
+        "Ref": "UdpAddress"
+      }
+    },
+    "WebDnsTarget": {
+      "Value": {
+        "Fn::GetAtt": [
+          "LoadBalancer",
+          "DNSName"
+        ]
+      }
+    },
+    "InstanceId": {
+      "Value": {
+        "Ref": "Server"
+      }
+    },
+    "AppTokenSecretArn": {
+      "Value": {
+        "Ref": "AppSecret"
+      }
+    },
+    "TargetGroupArn": {
+      "Value": {
+        "Ref": "Target"
+      }
+    }
+  }
+}

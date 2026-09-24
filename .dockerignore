@@ -1,0 +1,9 @@
+.env
+.git
+__pycache__
+.pytest_cache
+.venv
+data
+tests
+aws
+*.zip

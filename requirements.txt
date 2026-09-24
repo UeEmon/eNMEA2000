@@ -1,0 +1,9 @@
+fastapi==0.141.1
+uvicorn==0.53.0
+python-multipart==0.0.32
+pyais==3.2.3
+pynmea2==1.19.0
+sqlalchemy==2.0.54
+psycopg==3.3.6
+psycopg-binary==3.3.6
+websockets==16.0
