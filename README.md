@@ -182,7 +182,7 @@ python -m pytest -q
 cfn-lint aws/cloudformation.json
 ```
 
-PythonのテストはSQLiteを使用し、UDP/TCPソケット、WebSocket、ファイル入力、永続化を確認します。GitHub ActionsはPostgreSQLと2つのComposeプロジェクトで連接試験を行います。
+PythonのテストはSQLiteを使用し、UDP/TCPソケット、WebSocket、ファイル入力、永続化を確認します。GitHub ActionsはPostgreSQLと2つのComposeプロジェクトで連接試験を行い、ブラウザでエミュレータのCesium地図操作を確認します。
 Docker Desktop／PostgreSQL／AWSでの実行結果と区別した検証記録は [VERIFICATION.md](VERIFICATION.md) に記載しています。
 
 ## 9. 初期版の範囲外

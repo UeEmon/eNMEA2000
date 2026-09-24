@@ -26,6 +26,11 @@ jobs:
       - run: docker compose exec -T app python scripts/smoke.py
       - run: docker compose -f emulator/compose.yaml up -d --build --wait
       - run: python scripts/smoke_emulator.py
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm ci --prefix browser-tests
+      - run: npx --prefix browser-tests playwright install --with-deps chromium
+      - run: node browser-tests/gis-smoke.js
       - if: always()
         run: docker compose logs --tail=100
       - if: always()
