@@ -6,9 +6,11 @@ services:
     restart: unless-stopped
     init: true
     ports:
-      - "${WEB_BIND:-127.0.0.1}:18081:18081/tcp"
+      - "${WEB_BIND:-127.0.0.1}:18081:80/tcp"
       - "${UDP_BIND:-0.0.0.0}:10110:10110/udp"
       - "${TCP_BIND:-0.0.0.0}:10111:10111/tcp"
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0
     environment:
       APP_TOKEN: ${APP_TOKEN:?Run setup first}
       DATABASE_URL: postgresql+psycopg://nmea:${POSTGRES_PASSWORD:?Run setup first}@db:5432/nmea
