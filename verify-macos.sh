@@ -18,6 +18,7 @@ docker compose -f emulator/compose.yaml up -d --build --wait
 # The app container has Python and the login token already; no host Python needed.
 docker compose exec -T app python scripts/smoke.py
 docker compose exec -T \
+  -e NMEA_SMOKE_APP_URL=http://127.0.0.1:80 \
   -e NMEA_SMOKE_EMULATOR_URL=http://host.docker.internal:8090 \
   app python scripts/smoke_emulator.py
 

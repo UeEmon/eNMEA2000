@@ -29,4 +29,4 @@ for attempt in $(seq 1 60); do
   sleep 2
 done
 [ "$ready" = 1 ]
-docker run -d --name nmea-app --network nmea --restart unless-stopped --init --env-file /opt/nmea/app.env --mount type=bind,source=/opt/nmea/raw,target=/data -p 18081:18081/tcp -p 10110:10110/udp -p 10111:10111/tcp --log-driver awslogs --log-opt awslogs-region='${AWS::Region}' --log-opt awslogs-group='${LogGroup}' --log-opt awslogs-stream=app --log-opt mode=non-blocking --log-opt max-buffer-size=4m '${AppImage}'
+docker run -d --name nmea-app --network nmea --restart unless-stopped --init --env-file /opt/nmea/app.env --mount type=bind,source=/opt/nmea/raw,target=/data --sysctl net.ipv4.ip_unprivileged_port_start=0 -p 18081:80/tcp -p 10110:10110/udp -p 10111:10111/tcp --log-driver awslogs --log-opt awslogs-region='${AWS::Region}' --log-opt awslogs-group='${LogGroup}' --log-opt awslogs-stream=app --log-opt mode=non-blocking --log-opt max-buffer-size=4m '${AppImage}'

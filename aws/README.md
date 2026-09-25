@@ -4,7 +4,7 @@
 
 - **UDP：送信機器 → EC2 Elastic IP:10110 → Dockerアプリ**
 - **TCP：送信機器 → EC2 Elastic IP:10111 → 同じDockerアプリ**
-- **Web：ブラウザ → ALB HTTPS:443 → EC2:18081 → 同じDockerアプリ**
+- **Web：ブラウザ → ALB HTTPS:443 → EC2:18081 → Dockerコンテナ内:80**
 - DB：同一EC2のPostgreSQLコンテナ。DBポートはホストに公開しません。
 - ファイル・DB：暗号化gp3 EBSの `/opt/nmea/raw` と `/opt/nmea/postgres`。
 - 認証情報：Secrets ManagerでWebトークン・DBパスワードを別々に生成。
