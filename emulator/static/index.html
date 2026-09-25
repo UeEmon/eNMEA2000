@@ -1,6 +1,32 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NMEA TCP Emulator / Cesium</title><link rel="stylesheet" href="/static/cesium/Widgets/widgets.css"><link rel="stylesheet" href="/static/style.css"></head><body>
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NMEA TCP Emulator / Cesium</title><link rel="stylesheet" href="/static/cesium/Widgets/widgets.css"><link rel="stylesheet" href="/static/style.css"></head>
+<body>
 <header><div><small>INDEPENDENT TCP TEST ENVIRONMENT</small><h1>NMEA TCP Emulator <span>× Cesium GIS</span></h1><p>地図で開始位置・航路・針路を設定し、GPS / AISをTCPで送信</p></div><span id="connection" class="badge">停止中</span></header>
-<main><section class="map-card"><div class="toolbar" role="group" aria-label="地図操作"><button type="button" class="mode active" data-mode="pan">地図を移動</button><button type="button" class="mode" data-mode="position">開始位置を置く</button><button type="button" class="mode" data-mode="waypoint">航路点を追加</button><button type="button" class="mode" data-mode="heading">針路を指示</button><button type="button" id="removeLast" class="secondary">最後の点を削除</button><button type="button" id="clearRoute" class="secondary">航路を消去</button></div><div id="map" aria-label="操作可能なCesium地図"></div><div class="mapfoot"><span id="hint">地図を操作できます。開始位置や航路点はドラッグして変更できます。</span><span id="mapPos">WGS84</span></div></section>
-<aside><section class="card"><h2>航路・送信設定</h2><form id="config"><div class="fields"><label>開始緯度<input id="latitude" type="number" min="-89" max="89" step="0.00001" value="35.65" required></label><label>開始経度<input id="longitude" type="number" min="-180" max="180" step="0.00001" value="139.75" required></label><label>針路 (°)<input id="course" type="number" min="0" max="359.99" step="0.1" value="90" required></label><label>速力 (kt)<input id="speed" type="number" min="0" max="60" step="0.1" value="12" required></label><label>間隔 (秒)<input id="interval" type="number" min="0.2" max="60" step="0.1" value="1" required></label><label>AIS船舶数<input id="vessel_count" type="number" min="1" max="20" step="1" value="2" required></label></div><div class="checks"><label>GPS <input id="gps" type="checkbox" checked></label><label>AIS <input id="ais" type="checkbox" checked></label><label>航路を周回 <input id="loop" type="checkbox"></label></div><div id="waypoints" aria-live="polite">航路点 0 件</div><div class="actions"><button type="submit">送信開始・設定反映</button><button class="secondary" id="stop" type="button">停止</button></div></form></section><section class="card status"><h2>連接状況</h2><p>送信先 <b id="target">—</b></p><p>現在位置 <b id="position">—</b></p><p>現在針路・速力 <b id="currentMotion">—</b></p><p>航路進捗 <b id="routeProgress">—</b></p><p>累計センテンス <b id="lines">0</b></p><p id="error" role="alert"></p><details><summary>最新のNMEA文を見る</summary><pre id="preview">送信待機中</pre></details></section></aside></main>
+<main>
+  <section class="map-card"><div class="toolbar" role="group" aria-label="地図操作"><button type="button" class="mode active" data-mode="pan">地図を移動</button><button type="button" class="mode" data-mode="position">開始位置を置く</button><button type="button" class="mode" data-mode="waypoint">航路点を追加</button><button type="button" class="mode" data-mode="heading">針路を指示</button><button type="button" id="removeLast" class="secondary">最後の点を削除</button><button type="button" id="clearRoute" class="secondary">航路を消去</button></div><div id="map" aria-label="操作可能なCesium地図"></div><div class="mapfoot"><span id="hint">地図を操作できます。開始位置や航路点はドラッグして変更できます。</span><span id="mapPos">WGS84</span></div></section>
+  <aside>
+    <section class="card"><h2>航路・送信設定</h2><form id="config">
+      <div class="fields"><label>開始緯度<input id="latitude" type="number" min="-89" max="89" step="0.00001" value="35.65" required></label><label>開始経度<input id="longitude" type="number" min="-180" max="180" step="0.00001" value="139.75" required></label><label>針路 (°)<input id="course" type="number" min="0" max="359.99" step="0.1" value="90" required></label><label>速力 (kt)<input id="speed" type="number" min="0" max="60" step="0.1" value="12" required></label><label>間隔 (秒)<input id="interval" type="number" min="0.2" max="60" step="0.1" value="1" required></label><label>AIS船舶数<input id="vessel_count" type="number" min="1" max="20" step="1" value="2" required></label></div>
+      <div class="checks"><label>航路を周回 <input id="loop" type="checkbox"></label></div>
+      <div id="waypoints" aria-live="polite">航路点 0 件</div>
+      <h3 id="sentence-heading">メッセージタイプ</h3>
+      <div class="message-tabs" role="tablist" aria-labelledby="sentence-heading">
+        <button type="button" role="tab" id="tab-rmc" aria-controls="panel-rmc" aria-selected="true" tabindex="0" data-tab="rmc">RMC</button>
+        <button type="button" role="tab" id="tab-gga" aria-controls="panel-gga" aria-selected="false" tabindex="-1" data-tab="gga">GGA</button>
+        <button type="button" role="tab" id="tab-ais1" aria-controls="panel-ais1" aria-selected="false" tabindex="-1" data-tab="ais1">AIS 1</button>
+        <button type="button" role="tab" id="tab-ais5" aria-controls="panel-ais5" aria-selected="false" tabindex="-1" data-tab="ais5">AIS 5</button>
+      </div>
+      <section class="message-panel" role="tabpanel" id="panel-rmc" aria-labelledby="tab-rmc"><label class="type-toggle"><input id="rmc" type="checkbox" checked> RMCを送信</label><p>日時・位置・対地速力・針路。毎回送信します。</p></section>
+      <section class="message-panel" role="tabpanel" id="panel-gga" aria-labelledby="tab-gga" hidden><label class="type-toggle"><input id="gga" type="checkbox" checked> GGAを送信</label><p>位置・測位品質・衛星数。毎回送信します。</p></section>
+      <section class="message-panel" role="tabpanel" id="panel-ais1" aria-labelledby="tab-ais1" hidden><label class="type-toggle"><input id="ais_type1" type="checkbox" checked> AIS Type 1を送信</label><p>指定した船舶数の位置・速力・針路。毎回送信します。</p></section>
+      <section class="message-panel" role="tabpanel" id="panel-ais5" aria-labelledby="tab-ais5" hidden><label class="type-toggle"><input id="ais_type5" type="checkbox" checked> AIS Type 5を送信</label><p>同じ船舶の船名・呼出符号などの静的情報。開始時と60回ごとに送信します。</p></section>
+      <p class="apply-hint">タイプ設定は「送信開始・設定反映」で反映します。地図上の航路操作は即時反映します。</p>
+      <div class="actions"><button type="submit">送信開始・設定反映</button><button class="secondary" id="stop" type="button">停止</button></div>
+    </form></section>
+    <section class="card status"><h2>連接状況</h2><p>送信先 <b id="target">—</b></p><p>現在位置 <b id="position">—</b></p><p>現在針路・速力 <b id="currentMotion">—</b></p><p>航路進捗 <b id="routeProgress">—</b></p><p>累計センテンス <b id="lines">0</b></p><p id="error" role="alert"></p><details><summary>最新のNMEA文を見る</summary><pre id="preview">送信待機中</pre></details></section>
+  </aside>
+</main>
 <footer>Natural Earth背景図を同梱 · 航路編集は送信中も反映 · 航海・測位用途には使用しないでください</footer>
-<script>window.CESIUM_BASE_URL='/static/cesium/';</script><script src="/static/cesium/Cesium.js"></script><script src="/static/app.js"></script></body></html>
+<script>window.CESIUM_BASE_URL='/static/cesium/';</script><script src="/static/cesium/Cesium.js"></script><script src="/static/app.js"></script>
+</body></html>

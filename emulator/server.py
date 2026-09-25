@@ -32,6 +32,10 @@ class Config(BaseModel):
     vessel_count: int = Field(2,ge=1,le=20)
     ais: bool = True
     gps: bool = True
+    rmc: bool = True
+    gga: bool = True
+    ais_type1: bool = True
+    ais_type5: bool = True
     route: Route = Field(default_factory=Route)
 
 EARTH_NM = 3440.065
@@ -61,7 +65,7 @@ class Simulator:
     def status(self):
         vessels=[{'mmsi':431234567+i,'lat':min(89.9,self.latitude+i*.006),
                   'lon':((self.longitude+i*.008+180)%360)-180}
-                 for i in range(self.config.vessel_count)] if self.config.ais else []
+                 for i in range(self.config.vessel_count)] if self.config.ais and self.config.ais_type1 else []
         return dict(config=self.config.model_dump(),active=self.active,connected=self.connected,
                     lines=self.lines,error=self.error,preview=self.preview[-12:],target=f'{HOST}:{PORT}',
                     position={'lat':self.latitude,'lon':self.longitude},course=self.config.course,
@@ -144,16 +148,19 @@ class Simulator:
         self.tick+=1
         self.advance()
         out=[]
-        if cfg.gps:
+        if cfg.gps and (cfg.rmc or cfg.gga):
             lat,ns=coord(self.latitude,2);lon,ew=coord(self.longitude,3)
-            out.append(nmea(f'GNRMC,{utc:%H%M%S}.00,A,{lat},{ns},{lon},{ew},{self.current_speed:.1f},{cfg.course:.1f},{utc:%d%m%y},,,A'))
-            out.append(nmea(f'GNGGA,{utc:%H%M%S}.00,{lat},{ns},{lon},{ew},1,08,0.9,1.2,M,0.0,M,,') )
+            if cfg.rmc:
+                out.append(nmea(f'GNRMC,{utc:%H%M%S}.00,A,{lat},{ns},{lon},{ew},{self.current_speed:.1f},{cfg.course:.1f},{utc:%d%m%y},,,A'))
+            if cfg.gga:
+                out.append(nmea(f'GNGGA,{utc:%H%M%S}.00,{lat},{ns},{lon},{ew},1,08,0.9,1.2,M,0.0,M,,') )
         if cfg.ais:
             for i in range(cfg.vessel_count):
                 mmsi=431234567+i
                 alon=((self.longitude+i*.008+180)%360)-180;alat=min(89.9,self.latitude+i*.006)
-                out+=encode_dict({'msg_type':1,'mmsi':mmsi,'lat':alat,'lon':alon,'speed':self.current_speed,'course':cfg.course,'heading':int(cfg.course)},talker_id='AI',sentence_type='VDM')
-                if self.tick==1 or self.tick%60==0:
+                if cfg.ais_type1:
+                    out+=encode_dict({'msg_type':1,'mmsi':mmsi,'lat':alat,'lon':alon,'speed':self.current_speed,'course':cfg.course,'heading':int(cfg.course)},talker_id='AI',sentence_type='VDM')
+                if cfg.ais_type5 and (self.tick==1 or self.tick%60==0):
                     out+=encode_dict({'msg_type':5,'mmsi':mmsi,'shipname':f'TEST VESSEL {i+1}','callsign':'TEST',
                                       'ship_type':70,'to_bow':20,'to_stern':10,'to_port':5,'to_starboard':5,'destination':'TOKYO'},talker_id='AI',sentence_type='VDM')
         return out

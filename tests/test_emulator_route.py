@@ -27,6 +27,25 @@ def test_zero_length_loop_stays_stationary():
     sim.generate()
     assert (sim.latitude,sim.longitude)==(35.65,139.75) and sim.current_speed==0
 
+def test_message_type_selection_is_independent_and_legacy_flags_still_work():
+    sim=Simulator()
+    sim.config=Config(rmc=False,gga=True,ais_type1=False,ais_type5=True,vessel_count=1)
+    first=sim.generate()
+    assert len([line for line in first if line.startswith('$GNGGA')])==1
+    assert not any(line.startswith('$GNRMC') for line in first)
+    ais=[line for line in first if line.startswith('!AIVDM')]
+    assert ais and Decoder().parse(ais[0],'test')['sentence_type']=='VDM'
+    assert sim.status()['vessels']==[]  # Static Type 5 does not provide positions.
+    second=sim.generate()
+    assert len(second)==1 and second[0].startswith('$GNGGA')
+    sim.config=Config(gps=False,ais=False)
+    assert sim.generate()==[]
+    sim.config=Config(rmc=True,gga=False,ais_type1=True,ais_type5=False,vessel_count=1)
+    frames=sim.generate()
+    assert any(line.startswith('$GNRMC') for line in frames)
+    assert not any(line.startswith('$GNGGA') for line in frames)
+    assert len([line for line in frames if line.startswith('!AIVDM')])==1
+
 def test_route_api_live_edit_validation():
     with TestClient(app) as client:
         response=client.post('/api/route',json={'waypoints':[{'lat':35.66,'lon':139.76}], 'loop':True})
