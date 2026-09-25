@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     init: true
     ports:
-      - "${WEB_BIND:-127.0.0.1}:8080:8080/tcp"
+      - "${WEB_BIND:-127.0.0.1}:18081:18081/tcp"
       - "${UDP_BIND:-0.0.0.0}:10110:10110/udp"
       - "${TCP_BIND:-0.0.0.0}:10111:10111/tcp"
     environment:

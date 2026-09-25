@@ -14,6 +14,6 @@ COPY --from=cesium-assets --chown=nmea:nmea /web/node_modules/cesium/LICENSE.md 
 COPY --chown=nmea:nmea scripts ./scripts
 COPY --chown=nmea:nmea samples ./samples
 USER nmea
-EXPOSE 8080/tcp 10110/udp 10111/tcp
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/ready', timeout=3)"
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1", "--no-access-log"]
+EXPOSE 18081/tcp 10110/udp 10111/tcp
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18081/ready', timeout=3)"
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "18081", "--workers", "1", "--no-access-log"]

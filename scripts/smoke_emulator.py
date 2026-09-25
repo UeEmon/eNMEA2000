@@ -6,7 +6,7 @@ from pathlib import Path
 import time
 import urllib.request
 
-app=os.getenv('NMEA_SMOKE_APP_URL','http://127.0.0.1:8080')
+app=os.getenv('NMEA_SMOKE_APP_URL','http://127.0.0.1:18081')
 emulator=os.getenv('NMEA_SMOKE_EMULATOR_URL','http://127.0.0.1:8090')
 token=os.getenv('APP_TOKEN') or next(line.split('=',1)[1].strip() for line in Path('.env').read_text().splitlines() if line.startswith('APP_TOKEN='))
 client=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
