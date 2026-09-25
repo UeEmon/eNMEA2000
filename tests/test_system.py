@@ -129,3 +129,43 @@ def test_emulator_tcp_end_to_end(client):
     assert any(r['source'].startswith('tcp:') and r['sentence_type']=='RMC' and r['latitude'] for r in events)
     assert any(r['source'].startswith('tcp:') and r['sentence_type']=='VDM' and r['mmsi']=='431234567' for r in events)
     assert c.get('/health').json()['tcp_port']==main.TCP_PORT
+
+def test_delete_saved_database_data_requires_confirmation_and_pauses_ingest(client):
+    c,main,port=client
+    c.cookies.clear()
+    assert c.request('DELETE','/api/data',json={'confirm':'全件削除','expected_total':0}).status_code==401
+    login(c)
+    total=c.get('/api/stats').json()['total']
+    assert total>0 and c.get('/api/jobs').json()
+    assert c.request('DELETE','/api/data',json={'confirm':'全件削除','expected_total':total},
+                    headers={'Origin':'https://evil.example'}).status_code==403
+    assert c.request('DELETE','/api/data',json={'confirm':'wrong','expected_total':total}).status_code==400
+    main.state.jobs['busy']={'status':'running'}
+    try:
+        assert c.request('DELETE','/api/data',json={'confirm':'全件削除','expected_total':total}).status_code==409
+    finally:
+        main.state.jobs.pop('busy')
+    assert c.get('/api/stats').json()['total']==total
+    with c.websocket_connect('/ws') as ws:
+        assert ws.receive_json()['type']=='hello'
+        response=c.request('DELETE','/api/data',json={'confirm':'全件削除','expected_total':total})
+        assert response.status_code==200
+        assert response.json()['events_deleted']==total
+        assert response.json()['jobs_deleted']>=1
+        assert response.json()['source_files_kept']
+        assert ws.receive_json()['type']=='reset'
+    assert c.get('/api/stats').json()['total']==0
+    assert not c.get('/api/stats').json()['udp_enabled']
+    assert c.get('/api/events').json()==[] and c.get('/api/jobs').json()==[]
+    assert main.state.store.load_jobs()==[]
+    with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as s:
+        s.sendto(GGA.encode(),('127.0.0.1',port))
+    time.sleep(.02)
+    assert c.get('/api/stats').json()['total']==0
+    assert c.post('/api/udp/start').status_code==200
+    with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as s:
+        s.sendto(GGA.encode(),('127.0.0.1',port))
+    for _ in range(200):
+        if c.get('/api/stats').json()['total']==1:break
+        time.sleep(.01)
+    assert c.get('/api/stats').json()['total']==1
