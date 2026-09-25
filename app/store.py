@@ -47,3 +47,10 @@ class Store:
 
     def load_jobs(self):
         with self.engine.connect() as c: return [json.loads(r.payload) for r in c.execute(select(self.jobs))]
+
+    def clear(self):
+        """Remove stored events and import job metadata in one transaction; retain schema."""
+        with self.engine.begin() as c:
+            events = c.execute(self.events.delete()).rowcount
+            jobs = c.execute(self.jobs.delete()).rowcount
+        return {'events_deleted': events, 'jobs_deleted': jobs}

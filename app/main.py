@@ -15,6 +15,7 @@ from uuid import uuid4
 from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect, Query
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 from .parser import Decoder, SENTENCE, utcnow
 from .store import Store
 
@@ -42,6 +43,8 @@ class Runtime:
         self.transport = None
         self.tcp_server = None
         self.failed = False
+        self.maintenance = False
+        self.reset_lock = asyncio.Lock()
 
     def publish(self, rows):
         for q in list(self.clients):
@@ -169,6 +172,10 @@ def origin_ok(headers):
     if not origin: return True
     return urlparse(origin).netloc == headers.get('host')
 
+class DeleteRequest(BaseModel):
+    confirm: str
+    expected_total: int = Field(ge=0)
+
 @app.middleware('http')
 async def access(request, call_next):
     if request.url.path.startswith('/api/') and request.url.path != '/api/login':
@@ -215,15 +222,41 @@ async def stats():
     state.decoder.expire()
     return {**await asyncio.to_thread(state.store.stats), 'runtime':dict(state.metrics),
             'queue_size':state.queue.qsize(), 'udp_enabled':state.enabled, 'udp_port':UDP_PORT,
+            'maintenance':state.maintenance,
             'tcp_port':TCP_PORT,
             'ais_pending':len(state.decoder.groups), 'ais_expired':state.decoder.expired}
 
 @app.post('/api/udp/{action}')
 async def udp_control(action: str):
     if action not in ('start','stop'): raise HTTPException(400,'start / stop')
+    if state.maintenance and action == 'start': raise HTTPException(409,'データ削除中は受信を再開できません')
     state.enabled = action == 'start'
     if not state.enabled: state.decoder.groups.clear()
     return {'enabled':state.enabled}
+
+@app.delete('/api/data')
+async def delete_data(payload: DeleteRequest):
+    if payload.confirm != '全件削除': raise HTTPException(400,'確認文字列が一致しません')
+    async with state.reset_lock:
+        if state.maintenance: raise HTTPException(409,'データ削除中です')
+        if any(j['status'] in ('uploading','queued','running') for j in state.jobs.values()) or any(not task.done() for task in state.tasks):
+            raise HTTPException(409,'ファイル解析中です。完了または停止後に再試行してください')
+        state.maintenance = True
+        state.enabled = False
+        try:
+            await asyncio.wait_for(state.queue.join(), timeout=30)
+            current = await asyncio.to_thread(state.store.stats)
+            if current['total'] != payload.expected_total:
+                raise HTTPException(409,'件数が変わりました。更新してから再確認してください')
+            result = await asyncio.to_thread(state.store.clear)
+            state.jobs.clear()
+            state.decoder = Decoder()
+            for q in list(state.clients):
+                if q.full(): q.get_nowait()
+                with contextlib.suppress(asyncio.QueueFull): q.put_nowait({'type':'reset'})
+            return {**result, 'receiving':False, 'source_files_kept':True}
+        finally:
+            state.maintenance = False
 
 @app.get('/api/events')
 async def events(limit: int=Query(200,ge=1,le=2000), before:int|None=None, source:str|None=None,
@@ -285,6 +318,7 @@ async def import_file(job, path):
 
 @app.post('/api/files')
 async def upload(request: Request, filename: str=Query('input.log',max_length=200)):
+    if state.maintenance: raise HTTPException(409,'データ削除中はアップロードできません')
     if int(request.headers.get('content-length','0')) > MAX_FILE: raise HTTPException(413,'ファイル上限超過')
     if sum(j['status'] in ('running','queued','uploading') for j in state.jobs.values()) >= 2:
         raise HTTPException(429,'同時インポートは2件までです')
