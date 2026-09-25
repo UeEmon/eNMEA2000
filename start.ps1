@@ -8,4 +8,4 @@ if (-not (Test-Path '.env')) {
 }
 docker compose up -d --build --wait
 if ($LASTEXITCODE -ne 0) { throw 'Startup failed. Run docker compose logs.' }
-Write-Host 'Open http://localhost:8080 and sign in using APP_TOKEN from .env'
+Write-Host 'Open http://localhost:18081 and sign in using APP_TOKEN from .env'

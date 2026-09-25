@@ -26,10 +26,10 @@ macOSで本体・独立TCPエミュレータをまとめて構築し、DB保存�
 bash verify-macos.sh
 ```
 
-成功すると本体 `http://localhost:8080`、エミュレータ `http://localhost:8090` が利用できます。`.env` の `APP_TOKEN` で本体にログインします。スクリプトの試験では疑似データを送信・保存するため、検証用のDBで実行してください。M1/M2/M3/M4系MacとIntel MacではDocker Desktopの各CPU向けLinuxコンテナを使用します。終了時は `docker compose -f emulator/compose.yaml down` と `docker compose down` を実行します（データを残す場合、`-v` は付けません）。端末のDocker Desktop上での実動作は端末で確認してください。
+成功すると本体 `http://localhost:18081`、エミュレータ `http://localhost:8090` が利用できます。`.env` の `APP_TOKEN` で本体にログインします。スクリプトの試験では疑似データを送信・保存するため、検証用のDBで実行してください。M1/M2/M3/M4系MacとIntel MacではDocker Desktopの各CPU向けLinuxコンテナを使用します。終了時は `docker compose -f emulator/compose.yaml down` と `docker compose down` を実行します（データを残す場合、`-v` は付けません）。端末のDocker Desktop上での実動作は端末で確認してください。
 
 1. 初回のみイメージのダウンロードとビルドを行います。インターネット接続が必要です。
-2. `http://localhost:8080` を開きます。
+2. `http://localhost:18081` を開きます。
 3. 自動生成された `.env` の `APP_TOKEN=` 以降をログイン画面に入力します。
 4. `.env` は秘密情報です。共有用ZIPやGitに含めないでください。
 
@@ -156,7 +156,7 @@ docker compose -f emulator/compose.yaml up -d --build --wait
 
 `http://localhost:8090` を開き、緯度・経度・速度・針路・AIS船舶数・送信間隔を指定して「送信開始」を選びます。
 送信先は `host.docker.internal:10111` です。Docker Desktopのホスト公開ポートを通って本体へTCP接続します。
-画面の「TCP接続中」を確認し、本体の `http://localhost:8080` にAISとGPSが表示されることを確認してください。
+画面の「TCP接続中」を確認し、本体の `http://localhost:18081` にAISとGPSが表示されることを確認してください。
 エミュレータの画面は既定でホスト自身からしか開けません。別のホストへ接続する場合は、エミュレータ起動前に `NMEA_TARGET_HOST` と `NMEA_TARGET_PORT` を指定します。
 
 端末のPythonで端末間の自動連接確認を実行できます。

@@ -21,5 +21,5 @@ docker compose exec -T \
   -e NMEA_SMOKE_EMULATOR_URL=http://host.docker.internal:8090 \
   app python scripts/smoke_emulator.py
 
-printf '\nVerification passed. Main UI: http://localhost:8080  Emulator: http://localhost:8090\n'
+printf '\nVerification passed. Main UI: http://localhost:18081  Emulator: http://localhost:8090\n'
 printf 'Sign in with APP_TOKEN in the local .env file.\n'
