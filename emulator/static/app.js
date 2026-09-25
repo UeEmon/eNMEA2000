@@ -2,6 +2,23 @@
 const e=id=>document.getElementById(id);
 let viewer, route=[], looping=false, current=null, drag=null, busy=false, mode='pan';
 let displayed=[];
+const types=['rmc','gga','ais1','ais5'];
+const inputForType={rmc:'rmc',gga:'gga',ais1:'ais_type1',ais5:'ais_type5'};
+let configLoaded=false;
+function activateTab(type){for(const name of types){const selected=name===type,tab=e('tab-'+name);tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;e('panel-'+name).hidden=!selected}}
+function updateTypeTabs(){for(const name of types)e('tab-'+name).dataset.enabled=e(inputForType[name]).checked?'true':'false'}
+document.querySelectorAll('[data-tab]').forEach(button=>{
+  button.onclick=()=>activateTab(button.dataset.tab);
+  button.onkeydown=event=>{const index=types.indexOf(button.dataset.tab);let next;
+    if(event.key==='ArrowRight')next=(index+1)%types.length;
+    else if(event.key==='ArrowLeft')next=(index+types.length-1)%types.length;
+    else if(event.key==='Home')next=0;
+    else if(event.key==='End')next=types.length-1;
+    else return;
+    event.preventDefault();activateTab(types[next]);e('tab-'+types[next]).focus()};
+  e(inputForType[button.dataset.tab]).onchange=updateTypeTabs;
+});
+updateTypeTabs();
 function round(n){return Number(n.toFixed(6))}
 function setMode(next){mode=next;document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
   e('hint').textContent=({pan:'地図を操作できます。開始位置や航路点はドラッグして変更できます。',position:'地図をクリックすると送信位置が移動します。送信中も反映します。',waypoint:'地図をクリックするたび航路点を追加します。指定順に航行します。',heading:'地図をクリックして現在位置からの針路を指定します。既存の航路は解除します。'})[mode]}
@@ -23,7 +40,9 @@ function renderMap(status){if(!viewer||drag)return;removeEntities();const p=stat
   route.forEach((q,i)=>addPoint('sim-waypoint-'+i,q.lon,q.lat,Cesium.Color.YELLOW,'WP'+(i+1),11));
   addPoint('sim-start',p.lon,p.lat,Cesium.Color.TURQUOISE,'送信位置',15);
 }
-function updateStatus(s){current=s;route=s.config.route.waypoints;looping=s.config.route.loop;renderList();e('connection').textContent=s.active?(s.connected?'TCP接続中':'再接続中'):'停止中';e('target').textContent=s.target;e('lines').textContent=s.lines;
+function updateStatus(s){current=s;route=s.config.route.waypoints;looping=s.config.route.loop;renderList();
+  if(!configLoaded){for(const key of Object.values(inputForType))e(key).checked=s.config[key];updateTypeTabs();configLoaded=true}
+  e('connection').textContent=s.active?(s.connected?'TCP接続中':'再接続中'):'停止中';e('target').textContent=s.target;e('lines').textContent=s.lines;
   e('position').textContent=s.position.lat.toFixed(5)+'°, '+s.position.lon.toFixed(5)+'°';e('currentMotion').textContent=s.course.toFixed(1)+'° / '+s.current_speed.toFixed(1)+' kt';
   e('routeProgress').textContent=s.route_done?'到着':route.length?`${Math.min(s.route_index+1,route.length)} / ${route.length}`:'航路なし';
   e('preview').textContent=s.preview.join('\n')||'送信待機中';e('error').textContent=s.error||'';
@@ -58,6 +77,8 @@ function initMap(){if(!window.Cesium){e('error').textContent='Cesiumの読み込
 document.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>setMode(button.dataset.mode));
 e('removeLast').onclick=()=>applyRoute(route.slice(0,-1));e('clearRoute').onclick=()=>applyRoute([]);
 e('loop').onchange=()=>{looping=e('loop').checked;applyRoute(route)};
-e('config').onsubmit=async event=>{event.preventDefault();const data={};for(const key of ['latitude','longitude','course','speed','interval','vessel_count'])data[key]=Number(e(key).value);data.gps=e('gps').checked;data.ais=e('ais').checked;data.route={waypoints:route,loop:e('loop').checked};busy=true;try{updateStatus(await api('/api/start',data))}catch(err){error(err)}finally{busy=false}};
+e('config').onsubmit=async event=>{event.preventDefault();const data={};for(const key of ['latitude','longitude','course','speed','interval','vessel_count'])data[key]=Number(e(key).value);
+  for(const key of Object.values(inputForType))data[key]=e(key).checked;
+  data.gps=true;data.ais=true;data.route={waypoints:route,loop:e('loop').checked};busy=true;try{updateStatus(await api('/api/start',data))}catch(err){error(err)}finally{busy=false}};
 e('stop').onclick=async()=>{busy=true;try{updateStatus(await api('/api/stop',{}))}catch(err){error(err)}finally{busy=false}};
 initMap();refresh();setInterval(refresh,1000);
