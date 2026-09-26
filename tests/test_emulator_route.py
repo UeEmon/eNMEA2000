@@ -59,3 +59,29 @@ def test_route_api_live_edit_validation():
         new_route=client.post('/api/route',json={'waypoints':[{'lat':35.61,'lon':139.69}]}).json()
         assert new_route['route_index']==0 and not new_route['route_done']
         client.post('/api/stop')
+
+
+def test_ais_type5_fields_are_encoded_and_validated():
+    from pyais import decode
+    from server import AisType5
+    sim=Simulator()
+    sim.config=Config(gps=False,ais_type1=False,vessel_count=2,mmsi_start=431111111,
+        ais5=AisType5(shipname='SEA TEST',callsign='CALL123',ship_type=80,
+            imo=1234567,to_bow=42,to_stern=18,to_port=7,to_starboard=9,
+            month=12,day=25,hour=13,minute=45,draught=7.2,destination='OSAKA',dte=True))
+    frames=sim.generate()
+    assert len(frames)==4
+    first=decode(*frames[:2]).asdict()
+    second=decode(*frames[2:]).asdict()
+    assert first['mmsi']==431111111 and second['mmsi']==431111112
+    assert first['shipname'].strip('@ ')== 'SEA TEST 1'
+    assert second['shipname'].strip('@ ')== 'SEA TEST 2'
+    assert first['callsign'].strip('@ ')== 'CALL123'
+    assert first['ship_type']==80 and first['imo']==1234567
+    assert first['draught']==7.2 and first['destination'].strip('@ ')== 'OSAKA'
+    assert first['month']==12 and first['day']==25 and first['hour']==13 and first['minute']==45
+    assert first['dte'] is True
+    assert sim.generate()==[]
+    with TestClient(app) as client:
+        for field,value in [('callsign','日本語'),('shipname','TOO LONG A VESSEL NAME'),('draught',1.25),('to_port',64)]:
+            assert client.post('/api/start',json={'ais5':{field:value}}).status_code==422

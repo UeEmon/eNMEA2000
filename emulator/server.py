@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from pyais.encode import encode_dict
 
 HOST=os.getenv('NMEA_TARGET_HOST','host.docker.internal')
@@ -23,6 +23,32 @@ class Route(BaseModel):
     waypoints: list[Waypoint] = Field(default_factory=list, max_length=30)
     loop: bool = False
 
+class AisType5(BaseModel):
+    repeat: int = Field(0, ge=0, le=3)
+    ais_version: int = Field(0, ge=0, le=3)
+    imo: int = Field(0, ge=0, le=999999980)
+    callsign: str = Field('TEST', max_length=7, pattern=r'^[A-Z0-9 ]*$')
+    shipname: str = Field('TEST VESSEL', max_length=17, pattern=r'^[A-Z0-9 ]*$')
+    ship_type: int = Field(70, ge=0, le=99)
+    to_bow: int = Field(20, ge=0, le=511)
+    to_stern: int = Field(10, ge=0, le=511)
+    to_port: int = Field(5, ge=0, le=63)
+    to_starboard: int = Field(5, ge=0, le=63)
+    epfd: int = Field(1, ge=0, le=15)
+    month: int = Field(0, ge=0, le=12)
+    day: int = Field(0, ge=0, le=31)
+    hour: int = Field(24, ge=0, le=24)
+    minute: int = Field(60, ge=0, le=60)
+    draught: float = Field(0, ge=0, le=25.5)
+    destination: str = Field('TOKYO', max_length=20, pattern=r'^[A-Z0-9 ]*$')
+    dte: bool = False
+
+    @model_validator(mode='after')
+    def valid_draught(self):
+        if round(self.draught * 10, 6) % 1:
+            raise ValueError('draught must be in 0.1 m increments')
+        return self
+
 class Config(BaseModel):
     latitude: float = Field(35.65,ge=-89,le=89)
     longitude: float = Field(139.75,ge=-180,le=180)
@@ -30,12 +56,14 @@ class Config(BaseModel):
     speed: float = Field(12,ge=0,le=60)
     interval: float = Field(1,ge=.2,le=60)
     vessel_count: int = Field(2,ge=1,le=20)
+    mmsi_start: int = Field(431234567, ge=100000000, le=999999980)
     ais: bool = True
     gps: bool = True
     rmc: bool = True
     gga: bool = True
     ais_type1: bool = True
     ais_type5: bool = True
+    ais5: AisType5 = Field(default_factory=AisType5)
     route: Route = Field(default_factory=Route)
 
 EARTH_NM = 3440.065
@@ -63,7 +91,7 @@ class Simulator:
         self.route_index=0;self.route_done=False;self.current_speed=0
 
     def status(self):
-        vessels=[{'mmsi':431234567+i,'lat':min(89.9,self.latitude+i*.006),
+        vessels=[{'mmsi':self.config.mmsi_start+i,'lat':min(89.9,self.latitude+i*.006),
                   'lon':((self.longitude+i*.008+180)%360)-180}
                  for i in range(self.config.vessel_count)] if self.config.ais and self.config.ais_type1 else []
         return dict(config=self.config.model_dump(),active=self.active,connected=self.connected,
@@ -156,13 +184,15 @@ class Simulator:
                 out.append(nmea(f'GNGGA,{utc:%H%M%S}.00,{lat},{ns},{lon},{ew},1,08,0.9,1.2,M,0.0,M,,') )
         if cfg.ais:
             for i in range(cfg.vessel_count):
-                mmsi=431234567+i
+                mmsi=cfg.mmsi_start+i
                 alon=((self.longitude+i*.008+180)%360)-180;alat=min(89.9,self.latitude+i*.006)
                 if cfg.ais_type1:
                     out+=encode_dict({'msg_type':1,'mmsi':mmsi,'lat':alat,'lon':alon,'speed':self.current_speed,'course':cfg.course,'heading':int(cfg.course)},talker_id='AI',sentence_type='VDM')
                 if cfg.ais_type5 and (self.tick==1 or self.tick%60==0):
-                    out+=encode_dict({'msg_type':5,'mmsi':mmsi,'shipname':f'TEST VESSEL {i+1}','callsign':'TEST',
-                                      'ship_type':70,'to_bow':20,'to_stern':10,'to_port':5,'to_starboard':5,'destination':'TOKYO'},talker_id='AI',sentence_type='VDM')
+                    fields=cfg.ais5.model_dump()
+                    fields.update(msg_type=5,mmsi=mmsi,shipname=f'{cfg.ais5.shipname} {i+1}',
+                                  imo=cfg.ais5.imo+i if cfg.ais5.imo else 0)
+                    out+=encode_dict(fields,talker_id='AI',sentence_type='VDM')
         return out
 
 def coord(value,deg_width):
