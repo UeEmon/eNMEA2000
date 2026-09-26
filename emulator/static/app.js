@@ -4,7 +4,10 @@ let viewer, route=[], looping=false, current=null, drag=null, busy=false, mode='
 let displayed=[];
 const types=['rmc','gga','ais1','ais5'];
 const inputForType={rmc:'rmc',gga:'gga',ais1:'ais_type1',ais5:'ais_type5'};
+const ais5Fields=['repeat','ais_version','imo','callsign','shipname','ship_type','to_bow','to_stern','to_port','to_starboard','epfd','month','day','hour','minute','draught','destination','dte'];
+const ais5Text=['callsign','shipname','destination'];
 let configLoaded=false;
+for(const key of ais5Text)e('ais5_'+key).addEventListener('input',event=>{event.target.value=event.target.value.toUpperCase()});
 function activateTab(type){for(const name of types){const selected=name===type,tab=e('tab-'+name);tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;e('panel-'+name).hidden=!selected}}
 function updateTypeTabs(){for(const name of types)e('tab-'+name).dataset.enabled=e(inputForType[name]).checked?'true':'false'}
 document.querySelectorAll('[data-tab]').forEach(button=>{
@@ -36,12 +39,12 @@ function renderMap(status){if(!viewer||drag)return;removeEntities();const p=stat
   const r=Cesium.Math.toRadians(course),d=.025;
   const dest=[p.lon+d*Math.sin(r)/Math.max(.1,Math.cos(Cesium.Math.toRadians(p.lat))),p.lat+d*Math.cos(r)];
   displayed.push(viewer.entities.add({polyline:{positions:Cesium.Cartesian3.fromDegreesArray([p.lon,p.lat,...dest]),width:3,material:Cesium.Color.TURQUOISE}}));
-  for(const vessel of status.vessels){if(vessel.mmsi===431234567)continue;addPoint('sim-ship-'+vessel.mmsi,vessel.lon,vessel.lat,Cesium.Color.CORNFLOWERBLUE,String(vessel.mmsi),9)}
+  for(const vessel of status.vessels){if(vessel.mmsi===status.config.mmsi_start)continue;addPoint('sim-ship-'+vessel.mmsi,vessel.lon,vessel.lat,Cesium.Color.CORNFLOWERBLUE,String(vessel.mmsi),9)}
   route.forEach((q,i)=>addPoint('sim-waypoint-'+i,q.lon,q.lat,Cesium.Color.YELLOW,'WP'+(i+1),11));
   addPoint('sim-start',p.lon,p.lat,Cesium.Color.TURQUOISE,'送信位置',15);
 }
 function updateStatus(s){current=s;route=s.config.route.waypoints;looping=s.config.route.loop;renderList();
-  if(!configLoaded){for(const key of Object.values(inputForType))e(key).checked=s.config[key];updateTypeTabs();configLoaded=true}
+  if(!configLoaded){for(const key of Object.values(inputForType))e(key).checked=s.config[key];updateTypeTabs();e('mmsi_start').value=s.config.mmsi_start;for(const key of ais5Fields)e('ais5_'+key).value=String(s.config.ais5[key]);configLoaded=true}
   e('connection').textContent=s.active?(s.connected?'TCP接続中':'再接続中'):'停止中';e('target').textContent=s.target;e('lines').textContent=s.lines;
   e('position').textContent=s.position.lat.toFixed(5)+'°, '+s.position.lon.toFixed(5)+'°';e('currentMotion').textContent=s.course.toFixed(1)+'° / '+s.current_speed.toFixed(1)+' kt';
   e('routeProgress').textContent=s.route_done?'到着':route.length?`${Math.min(s.route_index+1,route.length)} / ${route.length}`:'航路なし';
@@ -79,6 +82,7 @@ e('removeLast').onclick=()=>applyRoute(route.slice(0,-1));e('clearRoute').onclic
 e('loop').onchange=()=>{looping=e('loop').checked;applyRoute(route)};
 e('config').onsubmit=async event=>{event.preventDefault();const data={};for(const key of ['latitude','longitude','course','speed','interval','vessel_count'])data[key]=Number(e(key).value);
   for(const key of Object.values(inputForType))data[key]=e(key).checked;
+  data.mmsi_start=Number(e('mmsi_start').value);data.ais5={};for(const key of ais5Fields){const value=e('ais5_'+key).value;data.ais5[key]=ais5Text.includes(key)?value:key==='dte'?value==='true':Number(value)}
   data.gps=true;data.ais=true;data.route={waypoints:route,loop:e('loop').checked};busy=true;try{updateStatus(await api('/api/start',data))}catch(err){error(err)}finally{busy=false}};
 e('stop').onclick=async()=>{busy=true;try{updateStatus(await api('/api/stop',{}))}catch(err){error(err)}finally{busy=false}};
 initMap();refresh();setInterval(refresh,1000);

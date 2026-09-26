@@ -20,7 +20,31 @@
       <section class="message-panel" role="tabpanel" id="panel-rmc" aria-labelledby="tab-rmc"><label class="type-toggle"><input id="rmc" type="checkbox" checked> RMCを送信</label><p>日時・位置・対地速力・針路。毎回送信します。</p></section>
       <section class="message-panel" role="tabpanel" id="panel-gga" aria-labelledby="tab-gga" hidden><label class="type-toggle"><input id="gga" type="checkbox" checked> GGAを送信</label><p>位置・測位品質・衛星数。毎回送信します。</p></section>
       <section class="message-panel" role="tabpanel" id="panel-ais1" aria-labelledby="tab-ais1" hidden><label class="type-toggle"><input id="ais_type1" type="checkbox" checked> AIS Type 1を送信</label><p>指定した船舶数の位置・速力・針路。毎回送信します。</p></section>
-      <section class="message-panel" role="tabpanel" id="panel-ais5" aria-labelledby="tab-ais5" hidden><label class="type-toggle"><input id="ais_type5" type="checkbox" checked> AIS Type 5を送信</label><p>同じ船舶の船名・呼出符号などの静的情報。開始時と60回ごとに送信します。</p></section>
+      <section class="message-panel" role="tabpanel" id="panel-ais5" aria-labelledby="tab-ais5" hidden>
+        <label class="type-toggle"><input id="ais_type5" type="checkbox" checked> AIS Type 5を送信</label>
+        <p>開始時と60回ごとに送信。MMSIはType 1と共通です。船名には船舶番号を付加します。</p>
+        <div class="fields">
+          <label>先頭MMSI（9桁）<input id="mmsi_start" type="number" min="100000000" max="999999980" step="1" value="431234567" required></label>
+          <label>再送回数<select id="ais5_repeat"><option value="0">0 通常</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+          <label>AISバージョン<select id="ais5_ais_version"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+          <label>IMO番号（0は未設定）<input id="ais5_imo" type="number" min="0" max="999999980" step="1" value="0" required></label>
+          <label>呼出符号（英数字7字以内）<input id="ais5_callsign" maxlength="7" pattern="[A-Z0-9 ]*" value="TEST" required></label>
+          <label>船名（英数字17字以内）<input id="ais5_shipname" maxlength="17" pattern="[A-Z0-9 ]*" value="TEST VESSEL" required></label>
+          <label>船種<select id="ais5_ship_type"><option value="0">0 未設定</option><option value="30">30 漁船</option><option value="36">36 帆船</option><option value="37">37 プレジャー</option><option value="60">60 客船</option><option value="70" selected>70 貨物船</option><option value="80">80 タンカー</option><option value="90">90 その他</option></select></label>
+          <label>船首まで (m)<input id="ais5_to_bow" type="number" min="0" max="511" step="1" value="20" required></label>
+          <label>船尾まで (m)<input id="ais5_to_stern" type="number" min="0" max="511" step="1" value="10" required></label>
+          <label>左舷まで (m)<input id="ais5_to_port" type="number" min="0" max="63" step="1" value="5" required></label>
+          <label>右舷まで (m)<input id="ais5_to_starboard" type="number" min="0" max="63" step="1" value="5" required></label>
+          <label>測位方式<select id="ais5_epfd"><option value="0">0 未設定</option><option value="1" selected>1 GPS</option><option value="2">2 GLONASS</option><option value="3">3 GPS/GLONASS</option><option value="7">7 測量済み</option><option value="8">8 Galileo</option></select></label>
+          <label>到着予定月（0は未設定）<input id="ais5_month" type="number" min="0" max="12" step="1" value="0" required></label>
+          <label>到着予定日（0は未設定）<input id="ais5_day" type="number" min="0" max="31" step="1" value="0" required></label>
+          <label>到着予定時（24は未設定）<input id="ais5_hour" type="number" min="0" max="24" step="1" value="24" required></label>
+          <label>到着予定分（60は未設定）<input id="ais5_minute" type="number" min="0" max="60" step="1" value="60" required></label>
+          <label>喫水 (m、0.1刻み)<input id="ais5_draught" type="number" min="0" max="25.5" step="0.1" value="0" required></label>
+          <label>目的地（英数字20字以内）<input id="ais5_destination" maxlength="20" pattern="[A-Z0-9 ]*" value="TOKYO"></label>
+          <label>データ端末<select id="ais5_dte"><option value="false">利用可能</option><option value="true">利用不可</option></select></label>
+        </div>
+      </section>
       <p class="apply-hint">タイプ設定は「送信開始・設定反映」で反映します。地図上の航路操作は即時反映します。</p>
       <div class="actions"><button type="submit">送信開始・設定反映</button><button class="secondary" id="stop" type="button">停止</button></div>
     </form></section>
