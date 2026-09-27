@@ -19,7 +19,7 @@ const { chromium }=require('playwright');
    await page.mouse.click(box.x+waypoint.x,box.y+waypoint.y,{button:'right'});
    const menuState=await page.evaluate(({x,y})=>({hidden:document.getElementById('quickMenu').hidden,
      title:document.getElementById('quickMenuTitle').textContent,
-     picked:viewer.scene.pick(new Cesium.Cartesian2(x,y))?.id?.id,
+     picked:viewer.scene.drillPick(new Cesium.Cartesian2(x,y)).map(hit=>hit.id?.id),
      errors:document.getElementById('error').textContent}),waypoint);
    if(menuState.hidden)throw Error('Right-click menu did not open: '+JSON.stringify({waypoint,menuState,errors}));
    const quickMenu=page.getByRole('menu',{name:'シンボルのクイックメニュー'});

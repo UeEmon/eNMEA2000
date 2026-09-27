@@ -47,7 +47,8 @@ function hideQuickMenu(){e('quickMenu').hidden=true}
 function quickAction(label,callback){const button=document.createElement('button');button.type='button';button.setAttribute('role','menuitem');button.textContent=label;
   button.onclick=()=>{hideQuickMenu();callback()};e('quickMenuActions').append(button)}
 function showQuickMenu(screen){if(!current||busy||drag)return;
-  const entity=viewer.scene.pick(screen)?.id,id=entity?.id;
+  const picked=viewer.scene.drillPick(screen),ids=picked.map(hit=>hit.id?.id).filter(id=>typeof id==='string');
+  const id=ids.find(value=>value.startsWith('sim-waypoint-'))||ids.find(value=>value==='sim-start')||ids.find(value=>value.startsWith('sim-ship-'));
   if(typeof id!=='string'){hideQuickMenu();return}
   let point,title,index;
   if(id==='sim-start'){point={...current.position};title='送信位置'}
@@ -81,8 +82,8 @@ function initMap(){if(!window.Cesium){e('error').textContent='Cesiumの読み込
   viewer.camera.setView({destination:Cesium.Cartesian3.fromDegrees(139.75,35.65,450000)});
   Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')).then(provider=>viewer.imageryLayers.addImageryProvider(provider)).catch(error);
   const handler=viewer.screenSpaceEventHandler;
-  e('map').addEventListener('contextmenu',event=>event.preventDefault());
-  handler.setInputAction(event=>showQuickMenu(event.position),Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+  e('map').addEventListener('contextmenu',event=>{event.preventDefault();const rect=viewer.canvas.getBoundingClientRect();
+    showQuickMenu(new Cesium.Cartesian2(event.clientX-rect.left,event.clientY-rect.top))});
   handler.setInputAction(async event=>{hideQuickMenu();if(drag)return;const p=mapCoords(event.position);if(!p||!current)return;
     if(mode==='position')await applyPosition(p);
     if(mode==='waypoint')await applyRoute([...route,p]);
