@@ -82,8 +82,10 @@ function initMap(){if(!window.Cesium){e('error').textContent='Cesiumの読み込
   viewer.camera.setView({destination:Cesium.Cartesian3.fromDegrees(139.75,35.65,450000)});
   Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')).then(provider=>viewer.imageryLayers.addImageryProvider(provider)).catch(error);
   const handler=viewer.screenSpaceEventHandler;
-  e('map').addEventListener('contextmenu',event=>{event.preventDefault();const rect=viewer.canvas.getBoundingClientRect();
-    showQuickMenu(new Cesium.Cartesian2(event.clientX-rect.left,event.clientY-rect.top))});
+  document.addEventListener('contextmenu',event=>{if(e('map').contains(event.target))event.preventDefault()},true);
+  document.addEventListener('pointerup',event=>{if(event.button!==2||!e('map').contains(event.target))return;
+    const rect=viewer.canvas.getBoundingClientRect();
+    showQuickMenu(new Cesium.Cartesian2(event.clientX-rect.left,event.clientY-rect.top))},true);
   handler.setInputAction(async event=>{hideQuickMenu();if(drag)return;const p=mapCoords(event.position);if(!p||!current)return;
     if(mode==='position')await applyPosition(p);
     if(mode==='waypoint')await applyRoute([...route,p]);
