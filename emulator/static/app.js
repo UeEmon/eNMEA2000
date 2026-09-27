@@ -23,7 +23,7 @@ document.querySelectorAll('[data-tab]').forEach(button=>{
 });
 updateTypeTabs();
 function round(n){return Number(n.toFixed(6))}
-function setMode(next){mode=next;document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+function setMode(next){mode=next;e('mapMode').value=mode;
   e('hint').textContent=({pan:'地図を操作できます。開始位置や航路点はドラッグして変更できます。',position:'地図をクリックすると送信位置が移動します。送信中も反映します。',waypoint:'地図をクリックするたび航路点を追加します。指定順に航行します。',heading:'地図をクリックして現在位置からの針路を指定します。既存の航路は解除します。'})[mode]}
 async function api(path,body){const response=await fetch(path,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});if(!response.ok)throw Error((await response.text()).slice(0,250));return response.json()}
 function error(err){e('error').textContent=err.message||String(err)}
@@ -77,7 +77,7 @@ function initMap(){if(!window.Cesium){e('error').textContent='Cesiumの読み込
     else{const edited=route.slice();edited[completed.index]=p;await applyRoute(edited)}
   },Cesium.ScreenSpaceEventType.LEFT_UP)
 }
-document.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>setMode(button.dataset.mode));
+e('mapMode').onchange=event=>setMode(event.target.value);
 e('removeLast').onclick=()=>applyRoute(route.slice(0,-1));e('clearRoute').onclick=()=>applyRoute([]);
 e('loop').onchange=()=>{looping=e('loop').checked;applyRoute(route)};
 e('config').onsubmit=async event=>{event.preventDefault();const data={};for(const key of ['latitude','longitude','course','speed','interval','vessel_count'])data[key]=Number(e(key).value);

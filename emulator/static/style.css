@@ -13,3 +13,13 @@
 .message-panel .fields input,.message-panel .fields select{width:100%;min-width:0;min-height:36px;display:block;margin-top:4px;background:#0b1927;border:1px solid #41566d;border-radius:6px;padding:7px;color:white;font:inherit}
 .message-panel .fields .ais5-wide{grid-column:1/-1}
 .message-panel p,.apply-hint{font-size:12px;color:#a9bfd1;margin:6px 0 0}
+
+/* Put the map above the controls so its canvas can use the whole workspace width. */
+main{grid-template-columns:minmax(0,1fr)}
+#map{height:min(75vh,900px);min-height:520px}
+aside{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);align-items:start}
+.map-mode-label{display:flex;align-items:center;gap:10px;color:#c4d2e1;font-size:13px}
+.map-mode-label select{min-width:175px;min-height:36px;background:#0b1927;border:1px solid #41566d;border-radius:6px;padding:6px 28px 6px 9px;color:white;font:inherit;cursor:pointer}
+.map-mode-label select:focus-visible{outline:2px solid #5fe0c4;outline-offset:2px}
+@media(max-width:960px){aside{grid-template-columns:1fr}#map{height:65vh;min-height:400px}}
+@media(max-width:680px){#map{height:55vh;min-height:320px}.map-mode-label{width:100%;justify-content:space-between}.map-mode-label select{flex:1;max-width:340px}}
