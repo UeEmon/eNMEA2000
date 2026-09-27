@@ -16,8 +16,10 @@ from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconn
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from pydantic import model_validator
+from sqlalchemy.exc import IntegrityError
 from .parser import Decoder, SENTENCE, utcnow
-from .store import Store
+from .store import Store, WatchConflict
 
 log = logging.getLogger('nmea')
 DATA = Path(os.getenv('DATA_DIR', './data'))
@@ -47,13 +49,14 @@ class Runtime:
         self.reset_lock = asyncio.Lock()
 
     def publish(self, rows):
+        alerts=[a for row in rows for a in row.get('watch_alerts',[])]
         for q in list(self.clients):
             if q.full():
                 q.get_nowait()
                 self.metrics['ws_dropped'] += 1
                 # Tell the browser to recover from the durable REST history.
                 with contextlib.suppress(asyncio.QueueFull): q.put_nowait({'type':'gap'})
-            else: q.put_nowait({'type':'events', 'rows':rows})
+            else: q.put_nowait({'type':'events', 'rows':rows, 'alerts':alerts})
 
     async def consume(self):
         while True:
@@ -176,6 +179,17 @@ class DeleteRequest(BaseModel):
     confirm: str
     expected_total: int = Field(ge=0)
 
+class WatchVessel(BaseModel):
+    mmsi: str | None = Field(default=None,pattern=r'^[1-9][0-9]{8}$')
+    imo: str | None = Field(default=None,pattern=r'^[1-9][0-9]{6}$')
+    name: str = Field(min_length=1,max_length=120)
+    notes: str = Field(default='',max_length=500)
+
+    @model_validator(mode='after')
+    def requires_identifier(self):
+        if not self.mmsi and not self.imo: raise ValueError('MMSIまたはIMO番号が必要です')
+        return self
+
 @app.middleware('http')
 async def access(request, call_next):
     if request.url.path.startswith('/api/') and request.url.path != '/api/login':
@@ -262,6 +276,38 @@ async def delete_data(payload: DeleteRequest):
 async def events(limit: int=Query(200,ge=1,le=2000), before:int|None=None, source:str|None=None,
                  kind:str|None=None, mmsi:str|None=None, after:int|None=None):
     return await asyncio.to_thread(state.store.recent, limit, before, source, kind, mmsi, after)
+
+@app.get('/api/watchlist')
+async def watchlist(): return await asyncio.to_thread(state.store.watchlist)
+
+async def save_watch(item, watch_id=None):
+    try: result=await asyncio.to_thread(state.store.watch_save,item.model_dump(),watch_id)
+    except WatchConflict as exc:
+        return JSONResponse({'detail':'MMSIまたはIMO番号が登録済みです','existing':exc.records},status_code=409)
+    except IntegrityError:
+        return JSONResponse({'detail':'MMSIまたはIMO番号が登録済みです','existing':await asyncio.to_thread(state.store.watchlist)},status_code=409)
+    if result is None: raise HTTPException(404,'登録対象が見つかりません')
+    return result
+
+@app.post('/api/watchlist',status_code=201)
+async def add_watch(item:WatchVessel): return await save_watch(item)
+
+@app.put('/api/watchlist/{watch_id}')
+async def edit_watch(watch_id:int,item:WatchVessel): return await save_watch(item,watch_id)
+
+@app.delete('/api/watchlist/{watch_id}')
+async def delete_watch(watch_id:int):
+    if not await asyncio.to_thread(state.store.watch_delete,watch_id): raise HTTPException(404,'登録対象が見つかりません')
+    return {'deleted':True}
+
+@app.get('/api/identities/{mmsi}')
+async def identity(mmsi:str):
+    if len(mmsi)!=9 or not mmsi.isdigit(): raise HTTPException(422,'MMSIの形式が不正です')
+    return await asyncio.to_thread(state.store.identity,mmsi) or {'mmsi':mmsi,'imo':None,'shipname':None}
+
+@app.get('/api/watch-alerts')
+async def watch_alerts(limit:int=Query(100,ge=1,le=500)):
+    return await asyncio.to_thread(state.store.recent_alerts,limit)
 
 @app.get('/api/jobs')
 async def jobs(): return sorted(state.jobs.values(), key=lambda j:j['created_at'], reverse=True)[:100]

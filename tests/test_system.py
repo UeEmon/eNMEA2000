@@ -130,12 +130,50 @@ def test_emulator_tcp_end_to_end(client):
     assert any(r['source'].startswith('tcp:') and r['sentence_type']=='VDM' and r['mmsi']=='431234567' for r in events)
     assert c.get('/health').json()['tcp_port']==main.TCP_PORT
 
+def test_watchlist_matches_mmsi_and_imo_and_persists_alerts(client):
+    c,main,port=client;login(c)
+    a={'mmsi':'431555111','name':'監視船A','notes':'確認対象'}
+    b={'imo':'1234567','name':'監視船B','notes':''}
+    assert c.post('/api/watchlist',json={'name':'no identifiers'}).status_code==422
+    assert c.post('/api/watchlist',json={'mmsi':'123','name':'bad'}).status_code==422
+    first=c.post('/api/watchlist',json=a);second=c.post('/api/watchlist',json=b)
+    assert first.status_code==201 and second.status_code==201
+    conflict=c.post('/api/watchlist',json={'mmsi':a['mmsi'],'name':'duplicate'})
+    assert conflict.status_code==409 and conflict.json()['existing'][0]['id']==first.json()['id']
+    assert c.put('/api/watchlist/'+str(first.json()['id']),json={'imo':b['imo'],'name':'collision'}).status_code==409
+    parts=encode_dict({'msg_type':5,'mmsi':a['mmsi'],'imo':int(b['imo']),'shipname':'WATCH VESSEL'},talker_id='AI')
+    with c.websocket_connect('/ws') as ws:
+        assert ws.receive_json()['type']=='hello'
+        with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as sock:
+            sock.sendto(('\r\n'.join(parts)+'\r\n').encode(),('127.0.0.1',port))
+        alerts=[]
+        for _ in range(3):
+            msg=ws.receive_json()
+            alerts+=msg.get('alerts',[])
+            if len(alerts)==2:break
+        assert {v['matched_by'] for v in alerts}=={'MMSI','IMO'}
+    assert c.get('/api/identities/'+a['mmsi']).json()['imo']==b['imo']
+    assert len(c.get('/api/watch-alerts').json())==2
+    # Type 1 has no IMO field; matching uses the Type 5 identity learned above.
+    from datetime import datetime, timedelta, timezone
+    with main.state.store.engine.begin() as db:
+        db.execute(main.state.store.watch.update().where(main.state.store.watch.c.id==second.json()['id'])
+                   .values(last_alert_at=(datetime.now(timezone.utc)-timedelta(minutes=2)).isoformat()))
+    position=encode_dict({'msg_type':1,'mmsi':a['mmsi'],'lat':35.65,'lon':139.75},talker_id='AI')[0]
+    main.state.store.add([Decoder().parse(position,'test:identity')])
+    assert c.get('/api/watch-alerts').json()[0]['matched_by']=='IMO'
+    assert c.put('/api/watchlist/'+str(first.json()['id']),json={**a,'name':'更新済み'}).json()['name']=='更新済み'
+    assert c.delete('/api/watchlist/'+str(first.json()['id'])).status_code==200
+    assert c.delete('/api/watchlist/'+str(second.json()['id'])).status_code==200
+    assert c.get('/api/watchlist').json()==[]
+
 def test_delete_saved_database_data_requires_confirmation_and_pauses_ingest(client):
     c,main,port=client
     c.cookies.clear()
     assert c.request('DELETE','/api/data',json={'confirm':'全件削除','expected_total':0}).status_code==401
     login(c)
     total=c.get('/api/stats').json()['total']
+    watched=c.post('/api/watchlist',json={'mmsi':'431777333','name':'保持対象'}).json()
     assert total>0 and c.get('/api/jobs').json()
     assert c.request('DELETE','/api/data',json={'confirm':'全件削除','expected_total':total},
                     headers={'Origin':'https://evil.example'}).status_code==403
@@ -158,6 +196,9 @@ def test_delete_saved_database_data_requires_confirmation_and_pauses_ingest(clie
     assert not c.get('/api/stats').json()['udp_enabled']
     assert c.get('/api/events').json()==[] and c.get('/api/jobs').json()==[]
     assert main.state.store.load_jobs()==[]
+    assert c.get('/api/watchlist').json()[0]['id']==watched['id']
+    assert c.get('/api/watch-alerts').json()==[]
+    c.delete('/api/watchlist/'+str(watched['id']))
     with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as s:
         s.sendto(GGA.encode(),('127.0.0.1',port))
     time.sleep(.02)
