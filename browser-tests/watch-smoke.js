@@ -18,7 +18,7 @@ const assert=require('node:assert/strict');
     await page.locator('#watchName').fill('監視船');
     await page.getByRole('dialog',{name:'特定船舶を登録'}).getByRole('button',{name:'保存する'}).click();
     await page.waitForFunction(()=>document.querySelector('#watchCount')?.textContent==='1件');
-    const frames=execFileSync('python',['-c',"from pyais.encode import encode_dict; print('\\n'.join(encode_dict({'msg_type':5,'mmsi':431888777,'imo':1234567,'shipname':'WATCH SHIP'},talker_id='AI')+encode_dict({'msg_type':1,'mmsi':431888777,'lat':35.65,'lon':139.75,'speed':1,'course':90},talker_id='AI')))"]).toString();
+    const frames=execFileSync('docker',['compose','exec','-T','app','python','-c',"from pyais.encode import encode_dict; print('\\n'.join(encode_dict({'msg_type':5,'mmsi':431888777,'imo':1234567,'shipname':'WATCH SHIP'},talker_id='AI')+encode_dict({'msg_type':1,'mmsi':431888777,'lat':35.65,'lon':139.75,'speed':1,'course':90},talker_id='AI')))"]).toString();
     await new Promise((resolve,reject)=>{const sock=net.connect(10111,'127.0.0.1',()=>sock.end(frames));sock.on('end',resolve);sock.on('error',reject)});
     await page.waitForFunction(()=>document.querySelector('#watchAlerts')?.textContent?.includes('監視船'),{timeout:15000});
     await page.waitForFunction(()=>[...symbolRows.values()].some(row=>row.mmsi==='431888777'),{timeout:15000});
