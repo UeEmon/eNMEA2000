@@ -23,3 +23,10 @@ aside{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);align-i
 .map-mode-label select:focus-visible{outline:2px solid #5fe0c4;outline-offset:2px}
 @media(max-width:960px){aside{grid-template-columns:1fr}#map{height:65vh;min-height:400px}}
 @media(max-width:680px){#map{height:55vh;min-height:320px}.map-mode-label{width:100%;justify-content:space-between}.map-mode-label select{flex:1;max-width:340px}}
+.map-card{position:relative}
+.quick-menu{position:absolute;z-index:20;min-width:220px;max-width:min(300px,calc(100% - 16px));padding:10px;background:#12283b;border:1px solid #6a91a6;border-radius:8px;box-shadow:0 12px 28px #050d17d9}
+.quick-menu[hidden]{display:none}
+.quick-menu strong,.quick-menu span{display:block;padding:0 7px}
+.quick-menu span{font-size:11px;color:#b4c7d6;margin:3px 0 8px}
+.quick-menu button{display:block;text-align:left;width:100%;margin-top:3px;background:transparent;border-color:transparent}
+.quick-menu button:hover,.quick-menu button:focus-visible{background:#29546c;border-color:#5fe0c4}

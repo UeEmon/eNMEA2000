@@ -43,6 +43,35 @@ function renderMap(status){if(!viewer||drag)return;removeEntities();const p=stat
   route.forEach((q,i)=>addPoint('sim-waypoint-'+i,q.lon,q.lat,Cesium.Color.YELLOW,'WP'+(i+1),11));
   addPoint('sim-start',p.lon,p.lat,Cesium.Color.TURQUOISE,'送信位置',15);
 }
+function hideQuickMenu(){e('quickMenu').hidden=true}
+function quickAction(label,callback){const button=document.createElement('button');button.type='button';button.setAttribute('role','menuitem');button.textContent=label;
+  button.onclick=()=>{hideQuickMenu();callback()};e('quickMenuActions').append(button)}
+function showQuickMenu(screen){if(!current||busy||drag)return;
+  const nearby=displayed.filter(entity=>typeof entity.id==='string'&&entity.position&&entity.point)
+    .map(entity=>{const p=Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,entity.position.getValue(viewer.clock.currentTime));
+      return {id:entity.id,distance:p?Math.hypot(p.x-screen.x,p.y-screen.y):Infinity}})
+    .filter(item=>item.distance<=18).sort((a,b)=>a.distance-b.distance);
+  let id=nearby[0]?.id;
+  if(!id){const hit=viewer.scene.pick(screen)?.id;id=hit?.id}
+  if(typeof id!=='string'){hideQuickMenu();return}
+  let point,title,index;
+  if(id==='sim-start'){point={...current.position};title='送信位置'}
+  else if(id.startsWith('sim-waypoint-')){index=Number(id.slice('sim-waypoint-'.length));point=route[index];title=`航路点 ${index+1}`}
+  else if(id.startsWith('sim-ship-')){const mmsi=Number(id.slice('sim-ship-'.length));point=current.vessels.find(v=>v.mmsi===mmsi);title=`船舶 MMSI ${mmsi}`}
+  if(!point){hideQuickMenu();return}
+  const pos={lat:point.lat,lon:point.lon},menu=e('quickMenu'),actions=e('quickMenuActions');
+  e('quickMenuTitle').textContent=title;e('quickMenuCoords').textContent=`${pos.lat.toFixed(5)}°, ${pos.lon.toFixed(5)}°`;actions.replaceChildren();
+  quickAction('ここを地図の中心に表示',()=>viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(pos.lon,pos.lat,100000)}));
+  if(id==='sim-start')quickAction('ここを航路点に追加',()=>applyRoute([...route,pos]));
+  else if(index!==undefined){quickAction('ここを開始位置に設定',()=>applyPosition(pos));
+    quickAction('この航路点を削除',()=>applyRoute(route.filter((_,i)=>i!==index)))}
+  else quickAction('ここを開始位置に設定',()=>applyPosition(pos));
+  menu.hidden=false;
+  const card=e('map').parentElement,canvas=viewer.canvas,canvasRect=canvas.getBoundingClientRect(),cardRect=card.getBoundingClientRect();
+  menu.style.left=Math.max(8,Math.min(canvasRect.left-cardRect.left+screen.x,card.clientWidth-menu.offsetWidth-8))+'px';
+  menu.style.top=Math.max(8,Math.min(canvasRect.top-cardRect.top+screen.y,card.clientHeight-menu.offsetHeight-8))+'px';
+  menu.querySelector('button')?.focus();
+}
 function updateStatus(s){current=s;route=s.config.route.waypoints;looping=s.config.route.loop;renderList();
   if(!configLoaded){for(const key of Object.values(inputForType))e(key).checked=s.config[key];updateTypeTabs();e('mmsi_start').value=s.config.mmsi_start;for(const key of ais5Fields)e('ais5_'+key).value=String(s.config.ais5[key]);configLoaded=true}
   e('connection').textContent=s.active?(s.connected?'TCP接続中':'再接続中'):'停止中';e('target').textContent=s.target;e('lines').textContent=s.lines;
@@ -57,7 +86,11 @@ function initMap(){if(!window.Cesium){e('error').textContent='Cesiumの読み込
   viewer.camera.setView({destination:Cesium.Cartesian3.fromDegrees(139.75,35.65,450000)});
   Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')).then(provider=>viewer.imageryLayers.addImageryProvider(provider)).catch(error);
   const handler=viewer.screenSpaceEventHandler;
-  handler.setInputAction(async event=>{if(drag)return;const p=mapCoords(event.position);if(!p||!current)return;
+  document.addEventListener('contextmenu',event=>{if(e('map').contains(event.target))event.preventDefault()},true);
+  document.addEventListener('pointerup',event=>{if(event.button!==2||!e('map').contains(event.target))return;
+    const rect=viewer.canvas.getBoundingClientRect();
+    showQuickMenu(new Cesium.Cartesian2(event.clientX-rect.left,event.clientY-rect.top))},true);
+  handler.setInputAction(async event=>{hideQuickMenu();if(drag)return;const p=mapCoords(event.position);if(!p||!current)return;
     if(mode==='position')await applyPosition(p);
     if(mode==='waypoint')await applyRoute([...route,p]);
     if(mode==='heading'){
@@ -78,6 +111,8 @@ function initMap(){if(!window.Cesium){e('error').textContent='Cesiumの読み込
   },Cesium.ScreenSpaceEventType.LEFT_UP)
 }
 e('mapMode').onchange=event=>setMode(event.target.value);
+document.addEventListener('pointerdown',event=>{if(!e('quickMenu').contains(event.target))hideQuickMenu()});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')hideQuickMenu()});
 e('removeLast').onclick=()=>applyRoute(route.slice(0,-1));e('clearRoute').onclick=()=>applyRoute([]);
 e('loop').onchange=()=>{looping=e('loop').checked;applyRoute(route)};
 e('config').onsubmit=async event=>{event.preventDefault();const data={};for(const key of ['latitude','longitude','course','speed','interval','vessel_count'])data[key]=Number(e(key).value);
