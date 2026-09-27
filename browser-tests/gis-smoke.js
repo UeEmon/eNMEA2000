@@ -10,18 +10,15 @@ const { chromium }=require('playwright');
    if(!box||box.width<700)throw Error('Cesium canvas should occupy full desktop width');
    const status=async()=>page.evaluate(()=>fetch('/api/status').then(r=>r.json()));
    await page.locator('#mapMode').selectOption('waypoint');
-   await page.mouse.click(box.x+box.width*.53,box.y+box.height*.48);
+   await page.mouse.click(box.x+box.width*.72,box.y+box.height*.63);
    await page.waitForFunction(async()=>{const s=await fetch('/api/status').then(r=>r.json());return s.config.route.waypoints.length===1},{timeout:10000});
    const route=await status();
    const waypoint=await page.evaluate(()=>{const entity=viewer.entities.getById('sim-waypoint-0');
      const point=Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,entity.position.getValue(viewer.clock.currentTime));
      return {x:point.x,y:point.y}});
    await page.mouse.click(box.x+waypoint.x,box.y+waypoint.y,{button:'right'});
-   const menuState=await page.evaluate(({x,y})=>({hidden:document.getElementById('quickMenu').hidden,
-     title:document.getElementById('quickMenuTitle').textContent,
-     picked:viewer.scene.drillPick(new Cesium.Cartesian2(x,y)).map(hit=>hit.id?.id),
-     errors:document.getElementById('error').textContent,pointer:window.__quickPointer,debug:window.__quickDebug,
-     canvas:viewer.canvas.getBoundingClientRect().toJSON(),scroll:{x:window.scrollX,y:window.scrollY}}),waypoint);
+   const menuState=await page.evaluate(()=>({hidden:document.getElementById('quickMenu').hidden,
+     title:document.getElementById('quickMenuTitle').textContent}));
    if(menuState.hidden)throw Error('Right-click menu did not open: '+JSON.stringify({waypoint,menuState,errors}));
    const quickMenu=page.getByRole('menu',{name:'シンボルのクイックメニュー'});
    await quickMenu.getByRole('menuitem',{name:'この航路点を削除'}).click();
