@@ -47,10 +47,12 @@ function hideQuickMenu(){e('quickMenu').hidden=true}
 function quickAction(label,callback){const button=document.createElement('button');button.type='button';button.setAttribute('role','menuitem');button.textContent=label;
   button.onclick=()=>{hideQuickMenu();callback()};e('quickMenuActions').append(button)}
 function showQuickMenu(screen){if(!current||busy||drag)return;
-  let picked;
-  try{picked=viewer.scene.drillPick(screen)}catch(err){picked=[viewer.scene.pick(screen)]}
-  const ids=picked.filter(Boolean).map(hit=>hit.id?.id).filter(id=>typeof id==='string');
-  const id=ids.find(value=>value.startsWith('sim-waypoint-'))||ids.find(value=>value==='sim-start')||ids.find(value=>value.startsWith('sim-ship-'));
+  const nearby=displayed.filter(entity=>typeof entity.id==='string'&&entity.position&&entity.point)
+    .map(entity=>{const p=Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,entity.position.getValue(viewer.clock.currentTime));
+      return {id:entity.id,distance:p?Math.hypot(p.x-screen.x,p.y-screen.y):Infinity}})
+    .filter(item=>item.distance<=18).sort((a,b)=>a.distance-b.distance);
+  let id=nearby[0]?.id;
+  if(!id){const hit=viewer.scene.pick(screen)?.id;id=hit?.id}
   if(typeof id!=='string'){hideQuickMenu();return}
   let point,title,index;
   if(id==='sim-start'){point={...current.position};title='送信位置'}
