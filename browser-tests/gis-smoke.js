@@ -20,7 +20,8 @@ const { chromium }=require('playwright');
    const menuState=await page.evaluate(({x,y})=>({hidden:document.getElementById('quickMenu').hidden,
      title:document.getElementById('quickMenuTitle').textContent,
      picked:viewer.scene.drillPick(new Cesium.Cartesian2(x,y)).map(hit=>hit.id?.id),
-     errors:document.getElementById('error').textContent}),waypoint);
+     errors:document.getElementById('error').textContent,pointer:window.__quickPointer,debug:window.__quickDebug,
+     canvas:viewer.canvas.getBoundingClientRect().toJSON(),scroll:{x:window.scrollX,y:window.scrollY}}),waypoint);
    if(menuState.hidden)throw Error('Right-click menu did not open: '+JSON.stringify({waypoint,menuState,errors}));
    const quickMenu=page.getByRole('menu',{name:'シンボルのクイックメニュー'});
    await quickMenu.getByRole('menuitem',{name:'この航路点を削除'}).click();

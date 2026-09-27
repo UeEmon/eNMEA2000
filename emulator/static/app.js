@@ -46,9 +46,10 @@ function renderMap(status){if(!viewer||drag)return;removeEntities();const p=stat
 function hideQuickMenu(){e('quickMenu').hidden=true}
 function quickAction(label,callback){const button=document.createElement('button');button.type='button';button.setAttribute('role','menuitem');button.textContent=label;
   button.onclick=()=>{hideQuickMenu();callback()};e('quickMenuActions').append(button)}
-function showQuickMenu(screen){if(!current||busy||drag)return;
+function showQuickMenu(screen){window.__quickDebug={stage:'entry',screen:{x:screen.x,y:screen.y},busy,drag:!!drag,hasCurrent:!!current};if(!current||busy||drag)return;
   const picked=viewer.scene.drillPick(screen),ids=picked.map(hit=>hit.id?.id).filter(id=>typeof id==='string');
   const id=ids.find(value=>value.startsWith('sim-waypoint-'))||ids.find(value=>value==='sim-start')||ids.find(value=>value.startsWith('sim-ship-'));
+  window.__quickDebug.id=id;
   if(typeof id!=='string'){hideQuickMenu();return}
   let point,title,index;
   if(id==='sim-start'){point={...current.position};title='送信位置'}
@@ -83,7 +84,7 @@ function initMap(){if(!window.Cesium){e('error').textContent='Cesiumの読み込
   Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')).then(provider=>viewer.imageryLayers.addImageryProvider(provider)).catch(error);
   const handler=viewer.screenSpaceEventHandler;
   document.addEventListener('contextmenu',event=>{if(e('map').contains(event.target))event.preventDefault()},true);
-  document.addEventListener('pointerup',event=>{if(event.button!==2||!e('map').contains(event.target))return;
+  document.addEventListener('pointerup',event=>{if(event.button!==2)return;window.__quickPointer={tag:event.target?.tagName,inside:e('map').contains(event.target),x:event.clientX,y:event.clientY};if(!e('map').contains(event.target))return;
     const rect=viewer.canvas.getBoundingClientRect();
     showQuickMenu(new Cesium.Cartesian2(event.clientX-rect.left,event.clientY-rect.top))},true);
   handler.setInputAction(async event=>{hideQuickMenu();if(drag)return;const p=mapCoords(event.position);if(!p||!current)return;
