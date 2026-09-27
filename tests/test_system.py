@@ -130,6 +130,35 @@ def test_emulator_tcp_end_to_end(client):
     assert any(r['source'].startswith('tcp:') and r['sentence_type']=='VDM' and r['mmsi']=='431234567' for r in events)
     assert c.get('/health').json()['tcp_port']==main.TCP_PORT
 
+def test_watchlist_matches_mmsi_and_imo_and_persists_alerts(client):
+    c,main,port=client;login(c)
+    a={'mmsi':'431555111','name':'監視船A','notes':'確認対象'}
+    b={'imo':'1234567','name':'監視船B','notes':''}
+    assert c.post('/api/watchlist',json={'name':'no identifiers'}).status_code==422
+    assert c.post('/api/watchlist',json={'mmsi':'123','name':'bad'}).status_code==422
+    first=c.post('/api/watchlist',json=a);second=c.post('/api/watchlist',json=b)
+    assert first.status_code==201 and second.status_code==201
+    conflict=c.post('/api/watchlist',json={'mmsi':a['mmsi'],'name':'duplicate'})
+    assert conflict.status_code==409 and conflict.json()['existing'][0]['id']==first.json()['id']
+    assert c.put('/api/watchlist/'+str(first.json()['id']),json={'imo':b['imo'],'name':'collision'}).status_code==409
+    parts=encode_dict({'msg_type':5,'mmsi':a['mmsi'],'imo':int(b['imo']),'shipname':'WATCH VESSEL'},talker_id='AI')
+    with c.websocket_connect('/ws') as ws:
+        assert ws.receive_json()['type']=='hello'
+        with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as sock:
+            sock.sendto(('\r\n'.join(parts)+'\r\n').encode(),('127.0.0.1',port))
+        alerts=[]
+        for _ in range(3):
+            msg=ws.receive_json()
+            alerts+=msg.get('alerts',[])
+            if len(alerts)==2:break
+        assert {v['matched_by'] for v in alerts}=={'MMSI','IMO'}
+    assert c.get('/api/identities/'+a['mmsi']).json()['imo']==b['imo']
+    assert len(c.get('/api/watch-alerts').json())==2
+    assert c.put('/api/watchlist/'+str(first.json()['id']),json={**a,'name':'更新済み'}).json()['name']=='更新済み'
+    assert c.delete('/api/watchlist/'+str(first.json()['id'])).status_code==200
+    assert c.delete('/api/watchlist/'+str(second.json()['id'])).status_code==200
+    assert c.get('/api/watchlist').json()==[]
+
 def test_delete_saved_database_data_requires_confirmation_and_pauses_ingest(client):
     c,main,port=client
     c.cookies.clear()
