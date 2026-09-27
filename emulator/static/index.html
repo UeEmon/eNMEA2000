@@ -28,8 +28,8 @@
           <label>再送回数<select id="ais5_repeat"><option value="0">0 通常</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
           <label>AISバージョン<select id="ais5_ais_version"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
           <label>IMO番号（0は未設定）<input id="ais5_imo" type="number" min="0" max="999999980" step="1" value="0" required></label>
-          <label>呼出符号（英数字7字以内）<input id="ais5_callsign" maxlength="7" pattern="[A-Z0-9 ]*" value="TEST" required></label>
-          <label>船名（英数字17字以内）<input id="ais5_shipname" maxlength="17" pattern="[A-Z0-9 ]*" value="TEST VESSEL" required></label>
+          <label>呼出符号（英数字7字以内）<input id="ais5_callsign" type="text" maxlength="7" pattern="[A-Z0-9 ]*" value="TEST" required></label>
+          <label class="ais5-wide">船名（英数字17字以内）<input id="ais5_shipname" type="text" maxlength="17" pattern="[A-Z0-9 ]*" value="TEST VESSEL" required></label>
           <label>船種<select id="ais5_ship_type"><option value="0">0 未設定</option><option value="30">30 漁船</option><option value="36">36 帆船</option><option value="37">37 プレジャー</option><option value="60">60 客船</option><option value="70" selected>70 貨物船</option><option value="80">80 タンカー</option><option value="90">90 その他</option></select></label>
           <label>船首まで (m)<input id="ais5_to_bow" type="number" min="0" max="511" step="1" value="20" required></label>
           <label>船尾まで (m)<input id="ais5_to_stern" type="number" min="0" max="511" step="1" value="10" required></label>
@@ -41,7 +41,7 @@
           <label>到着予定時（24は未設定）<input id="ais5_hour" type="number" min="0" max="24" step="1" value="24" required></label>
           <label>到着予定分（60は未設定）<input id="ais5_minute" type="number" min="0" max="60" step="1" value="60" required></label>
           <label>喫水 (m、0.1刻み)<input id="ais5_draught" type="number" min="0" max="25.5" step="0.1" value="0" required></label>
-          <label>目的地（英数字20字以内）<input id="ais5_destination" maxlength="20" pattern="[A-Z0-9 ]*" value="TOKYO"></label>
+          <label class="ais5-wide">目的地（英数字20字以内）<input id="ais5_destination" type="text" maxlength="20" pattern="[A-Z0-9 ]*" value="TOKYO"></label>
           <label>データ端末<select id="ais5_dte"><option value="false">利用可能</option><option value="true">利用不可</option></select></label>
         </div>
       </section>

@@ -9,5 +9,7 @@
 .message-panel{border:1px solid #41566d;border-top:0;border-radius:0 0 6px 6px;padding:12px;min-height:92px}
 .message-panel[hidden]{display:none}
 .message-panel .type-toggle{display:flex;gap:8px;align-items:center;font-weight:600}
-.message-panel input{accent-color:#5fe0c4;width:18px;height:18px}
+.message-panel .type-toggle input[type=checkbox]{accent-color:#5fe0c4;width:18px;height:18px;flex:none}
+.message-panel .fields input,.message-panel .fields select{width:100%;min-width:0;min-height:36px;display:block;margin-top:4px;background:#0b1927;border:1px solid #41566d;border-radius:6px;padding:7px;color:white;font:inherit}
+.message-panel .fields .ais5-wide{grid-column:1/-1}
 .message-panel p,.apply-hint{font-size:12px;color:#a9bfd1;margin:6px 0 0}
