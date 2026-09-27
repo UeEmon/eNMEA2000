@@ -17,6 +17,11 @@ const { chromium }=require('playwright');
      const point=Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,entity.position.getValue(viewer.clock.currentTime));
      return {x:point.x,y:point.y}});
    await page.mouse.click(box.x+waypoint.x,box.y+waypoint.y,{button:'right'});
+   const menuState=await page.evaluate(({x,y})=>({hidden:document.getElementById('quickMenu').hidden,
+     title:document.getElementById('quickMenuTitle').textContent,
+     picked:viewer.scene.pick(new Cesium.Cartesian2(x,y))?.id?.id,
+     errors:document.getElementById('error').textContent}),waypoint);
+   if(menuState.hidden)throw Error('Right-click menu did not open: '+JSON.stringify({waypoint,menuState,errors}));
    const quickMenu=page.getByRole('menu',{name:'シンボルのクイックメニュー'});
    await quickMenu.getByRole('menuitem',{name:'この航路点を削除'}).click();
    await page.waitForFunction(async()=>{const s=await fetch('/api/status').then(r=>r.json());return s.config.route.waypoints.length===0},{timeout:10000});
