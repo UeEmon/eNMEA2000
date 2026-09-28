@@ -162,6 +162,10 @@ def test_watchlist_matches_mmsi_and_imo_and_persists_alerts(client):
     position=encode_dict({'msg_type':1,'mmsi':a['mmsi'],'lat':35.65,'lon':139.75},talker_id='AI')[0]
     main.state.store.add([Decoder().parse(position,'test:identity')])
     assert c.get('/api/watch-alerts').json()[0]['matched_by']=='IMO'
+    location=c.get('/api/vessels/'+a['mmsi']+'/position')
+    assert location.status_code==200 and location.json()['latitude']==pytest.approx(35.65)
+    assert c.get('/api/vessels/431999999/position').status_code==404
+    assert c.get('/api/vessels/invalid/position').status_code==422
     assert c.put('/api/watchlist/'+str(first.json()['id']),json={**a,'name':'更新済み'}).json()['name']=='更新済み'
     assert c.delete('/api/watchlist/'+str(first.json()['id'])).status_code==200
     assert c.delete('/api/watchlist/'+str(second.json()['id'])).status_code==200

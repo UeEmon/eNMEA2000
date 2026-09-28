@@ -309,6 +309,13 @@ async def identity(mmsi:str):
 async def watch_alerts(limit:int=Query(100,ge=1,le=500)):
     return await asyncio.to_thread(state.store.recent_alerts,limit)
 
+@app.get('/api/vessels/{mmsi}/position')
+async def vessel_position(mmsi:str):
+    if len(mmsi)!=9 or not mmsi.isdigit(): raise HTTPException(422,'MMSIの形式が不正です')
+    row=await asyncio.to_thread(state.store.latest_position,mmsi)
+    if row is None: raise HTTPException(404,'この船舶の位置情報はまだ受信していません')
+    return row
+
 @app.get('/api/jobs')
 async def jobs(): return sorted(state.jobs.values(), key=lambda j:j['created_at'], reverse=True)[:100]
 

@@ -101,6 +101,13 @@ class Store:
         with self.engine.connect() as c:
             return [dict(r._mapping) for r in c.execute(select(self.alerts).order_by(self.alerts.c.id.desc()).limit(limit))]
 
+    def latest_position(self, mmsi):
+        query=select(self.events).where(self.events.c.mmsi==mmsi,self.events.c.status=='ok',
+            self.events.c.latitude.is_not(None),self.events.c.longitude.is_not(None)).order_by(self.events.c.id.desc()).limit(1)
+        with self.engine.connect() as c:
+            row=c.execute(query).first()
+            return dict(json.loads(row.payload),id=row.id) if row else None
+
     def recent(self, limit=200, before=None, source=None, kind=None, mmsi=None, after=None):
         query = select(self.events)
         for col, value in [('source',source),('sentence_type',kind),('mmsi',mmsi)]:
