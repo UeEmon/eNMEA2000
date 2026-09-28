@@ -89,11 +89,11 @@ function draw(view){
     const description='MMSI '+(latest.mmsi||'自船')+' / '+latest.received_at;
     const symbol=globe.entities.add({name:latest.mmsi||'GPS',description,
       position:Cesium.Cartesian3.fromDegrees(lon,lat),
-      point:{pixelSize:watched?15:10,color,outlineColor:Cesium.Color.BLACK,outlineWidth:2,heightReference:Cesium.HeightReference.CLAMP_TO_GROUND},
+      ...NmeaSymbols.graphics({own:!latest.mmsi,watched,selected:latest.mmsi===focusedMmsi&&latest.id===focusedRow?.id}),
       label:{text:latest.mmsi||'GPS',font:'12px sans-serif',fillColor:Cesium.Color.WHITE,showBackground:true,
-             pixelOffset:new Cesium.Cartesian2(0,-24),distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,3000000)}});
+             pixelOffset:new Cesium.Cartesian2(0,-34),distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,3000000)}});
     globeEntities.push(symbol);if(latest.mmsi)symbolRows.set(symbol,latest);
-    if(latest.mmsi===focusedMmsi&&latest.id===focusedRow?.id){globe.selectedEntity=symbol;selectedSymbol=latest;symbol.point.outlineColor=Cesium.Color.YELLOW;symbol.point.outlineWidth=4;symbol.point.pixelSize=18}
+    if(latest.mmsi===focusedMmsi&&latest.id===focusedRow?.id){globe.selectedEntity=symbol;selectedSymbol=latest}
     if(Number.isFinite(cog) && cog>=0 && cog<360){
       const d=.012,r=cog*Math.PI/180, nextLat=lat+d*Math.cos(r),nextLon=lon+d*Math.sin(r)/Math.max(.1,Math.cos(lat*Math.PI/180));
       globeEntities.push(globe.entities.add({polyline:{positions:Cesium.Cartesian3.fromDegreesArray([lon,lat,nextLon,nextLat]),width:2,material:color}}));
@@ -126,6 +126,7 @@ function connectWS(){if(!active)return;socket=new WebSocket(`${location.protocol
 async function start(){await Promise.all([refresh(),loadWatch(),api('/api/watch-alerts').then(items=>addAlerts(items))]);active=true;connectWS();clearInterval(timer);timer=setInterval(()=>refresh().catch(e=>toast(e.message)),2500)}
 $('loginForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:$('token').value})});$('token').value='';$('loginError').textContent='';$('login').close();await start()}catch(err){$('loginError').textContent=err.message}};
 $('logout').onclick=async()=>{await api('/api/logout',{method:'POST'});disconnect();clearDisplay();render();$('login').showModal()};
+NmeaSymbols.bind($('symbolStandard'),()=>draw(filtered()));
 $('watchAdd').onclick=()=>watchEditor();$('watchCancel').onclick=()=>$('watchDialog').close();
 $('mapQuickRegister').onclick=()=>{if(selectedSymbol)openSymbolWatch(selectedSymbol)};
 $('mapQuickCenter').onclick=()=>{if(selectedSymbol)globe.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(selectedSymbol.longitude,selectedSymbol.latitude,120000)});closeMapQuick()};

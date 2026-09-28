@@ -33,7 +33,7 @@ function renderList(){const list=e('waypoints');list.replaceChildren();if(!route
 async function applyRoute(next){busy=true;try{const status=await api('/api/route',{waypoints:next,loop:looping});route=status.config.route.waypoints;current=status;renderList();renderMap(status)}catch(err){error(err)}finally{busy=false}}
 async function applyPosition(pos){busy=true;try{const s=await api('/api/position',pos);e('latitude').value=pos.lat;e('longitude').value=pos.lon;current=s;renderMap(s)}catch(err){error(err)}finally{busy=false}}
 function removeEntities(){displayed.forEach(item=>viewer.entities.remove(item));displayed=[]}
-function addPoint(id,lon,lat,color,label,size){const entity=viewer.entities.add({id,position:Cesium.Cartesian3.fromDegrees(lon,lat),point:{pixelSize:size,color,outlineColor:Cesium.Color.BLACK,outlineWidth:2,heightReference:Cesium.HeightReference.CLAMP_TO_GROUND},label:{text:label,font:'12px sans-serif',fillColor:Cesium.Color.WHITE,showBackground:true,pixelOffset:new Cesium.Cartesian2(0,-22)}});displayed.push(entity);return entity}
+function addPoint(id,lon,lat,color,label,size){const entity=viewer.entities.add({id,position:Cesium.Cartesian3.fromDegrees(lon,lat),...(id.startsWith('sim-waypoint-')?{point:{pixelSize:size,color,outlineColor:Cesium.Color.BLACK,outlineWidth:2,heightReference:Cesium.HeightReference.CLAMP_TO_GROUND}}:NmeaSymbols.graphics({own:id==='sim-start',simulation:true})),label:{text:label,font:'12px sans-serif',fillColor:Cesium.Color.WHITE,showBackground:true,pixelOffset:new Cesium.Cartesian2(0,id.startsWith('sim-waypoint-')?-22:-34)}});displayed.push(entity);return entity}
 function renderMap(status){if(!viewer||drag)return;removeEntities();const p=status.position,course=status.course;
   if(route.length){const coords=[p,...route.slice(Math.min(status.route_index,route.length-1))].flatMap(q=>[q.lon,q.lat]);if(coords.length>=4)displayed.push(viewer.entities.add({polyline:{positions:Cesium.Cartesian3.fromDegreesArray(coords),width:3,material:Cesium.Color.YELLOW.withAlpha(.9)}}))}
   const r=Cesium.Math.toRadians(course),d=.025;
@@ -47,7 +47,7 @@ function hideQuickMenu(){e('quickMenu').hidden=true}
 function quickAction(label,callback){const button=document.createElement('button');button.type='button';button.setAttribute('role','menuitem');button.textContent=label;
   button.onclick=()=>{hideQuickMenu();callback()};e('quickMenuActions').append(button)}
 function showQuickMenu(screen){if(!current||busy||drag)return;
-  const nearby=displayed.filter(entity=>typeof entity.id==='string'&&entity.position&&entity.point)
+  const nearby=displayed.filter(entity=>typeof entity.id==='string'&&entity.position&&(entity.point||entity.billboard))
     .map(entity=>{const p=Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,entity.position.getValue(viewer.clock.currentTime));
       return {id:entity.id,distance:p?Math.hypot(p.x-screen.x,p.y-screen.y):Infinity}})
     .filter(item=>item.distance<=18).sort((a,b)=>a.distance-b.distance);
@@ -110,6 +110,7 @@ function initMap(){if(!window.Cesium){e('error').textContent='Cesiumの読み込
     else{const edited=route.slice();edited[completed.index]=p;await applyRoute(edited)}
   },Cesium.ScreenSpaceEventType.LEFT_UP)
 }
+NmeaSymbols.bind(e('symbolStandard'),()=>{if(current)renderMap(current)});
 e('mapMode').onchange=event=>setMode(event.target.value);
 document.addEventListener('pointerdown',event=>{if(!e('quickMenu').contains(event.target))hideQuickMenu()});
 document.addEventListener('keydown',event=>{if(event.key==='Escape')hideQuickMenu()});

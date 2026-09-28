@@ -13,6 +13,9 @@ COPY --from=cesium-assets --chown=nmea:nmea /web/node_modules/cesium/Build/Cesiu
 COPY --from=cesium-assets --chown=nmea:nmea /web/node_modules/cesium/LICENSE.md ./app/static/cesium/LICENSE.md
 COPY --chown=nmea:nmea scripts ./scripts
 COPY --chown=nmea:nmea samples ./samples
+COPY --from=cesium-assets --chown=nmea:nmea /web/node_modules/milsymbol/dist/milsymbol.js ./app/static/milsymbol.js
+COPY --from=cesium-assets --chown=nmea:nmea /web/node_modules/milsymbol/LICENSE ./app/static/milsymbol-LICENSE.txt
+COPY --chown=nmea:nmea web/symbology.js ./app/static/symbology.js
 USER nmea
 EXPOSE 80/tcp 10110/udp 10111/tcp
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:80/ready', timeout=3)"

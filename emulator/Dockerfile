@@ -12,6 +12,9 @@ COPY --chown=sim:sim emulator/server.py ./server.py
 COPY --chown=sim:sim emulator/static ./static
 COPY --from=cesium-assets --chown=sim:sim /web/node_modules/cesium/Build/Cesium ./static/cesium
 COPY --from=cesium-assets --chown=sim:sim /web/node_modules/cesium/LICENSE.md ./static/cesium/LICENSE.md
+COPY --from=cesium-assets --chown=sim:sim /web/node_modules/milsymbol/dist/milsymbol.js ./static/milsymbol.js
+COPY --from=cesium-assets --chown=sim:sim /web/node_modules/milsymbol/LICENSE ./static/milsymbol-LICENSE.txt
+COPY --chown=sim:sim web/symbology.js ./static/symbology.js
 USER sim
 EXPOSE 8090
 HEALTHCHECK --interval=15s --timeout=3s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=2)"

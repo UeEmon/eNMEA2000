@@ -31,6 +31,14 @@ const assert=require('node:assert/strict');
       return Math.abs(p.x-globe.canvas.clientWidth/2)<5&&Math.abs(p.y-globe.canvas.clientHeight/2)<5}),'Alert symbol must be centered');
     await page.locator('#search').fill('');
     await page.waitForFunction(()=>globe.selectedEntity&&symbolRows.get(globe.selectedEntity)?.mmsi==='431888777');
+    await page.locator('.symbol-settings summary').click();
+    for(const standard of ['APP6','2525','APP6']){
+      await page.locator('#symbolStandard').selectOption(standard);
+      assert.equal(await page.evaluate(()=>NmeaSymbols.getStandard()),standard);
+      assert(await page.evaluate(()=>globe.selectedEntity?.billboard?.image.getValue() instanceof HTMLCanvasElement));
+      assert(await page.evaluate(()=>symbolRows.get(globe.selectedEntity)?.mmsi==='431888777'));
+    }
+    await page.locator('.symbol-settings summary').click();
     const point=await page.evaluate(()=>{const entry=[...symbolRows].find(([_,row])=>row.mmsi==='431888777');
       const p=Cesium.SceneTransforms.worldToWindowCoordinates(globe.scene,entry[0].position.getValue(globe.clock.currentTime));
       const b=globe.canvas.getBoundingClientRect();return {x:b.left+p.x,y:b.top+p.y}});
@@ -39,6 +47,10 @@ const assert=require('node:assert/strict');
     await page.getByRole('dialog',{name:'特定船舶を登録'}).getByRole('button',{name:'保存する'}).click();
     await page.getByRole('dialog',{name:'登録済みの船舶です'}).getByRole('button',{name:'更新する'}).click();
     await page.waitForFunction(()=>document.querySelector('#watchCount')?.textContent==='1件' && document.querySelector('#watchRows')?.textContent?.includes('431888777'));
+    await page.reload();
+    await page.waitForFunction(()=>[...symbolRows.keys()].some(entity=>entity.billboard));
+    assert.equal(await page.locator('#symbolStandard').inputValue(),'APP6');
+    assert.equal(await page.evaluate(()=>NmeaSymbols.getStandard()),'APP6');
     assert.deepEqual(errors,[]);
     console.log('PASS: IMO watch alert, GIS right-click registration, duplicate update');
   }finally{await browser.close()}
