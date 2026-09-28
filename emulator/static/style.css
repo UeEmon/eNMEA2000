@@ -30,3 +30,5 @@ aside{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);align-i
 .quick-menu span{font-size:11px;color:#b4c7d6;margin:3px 0 8px}
 .quick-menu button{display:block;text-align:left;width:100%;margin-top:3px;background:transparent;border-color:transparent}
 .quick-menu button:hover,.quick-menu button:focus-visible{background:#29546c;border-color:#5fe0c4}
+
+.symbol-settings{position:relative;font-size:13px}.symbol-settings summary{cursor:pointer;padding:6px 10px}.symbol-settings>div{position:absolute;right:0;top:100%;z-index:25;width:260px;max-width:80vw;padding:14px;background:#152b3c;color:#e6edf5;border:1px solid #7da7be;border-radius:8px;box-shadow:0 10px 25px #06111bd9}.symbol-settings label,.symbol-settings small{display:block}.symbol-settings select{width:100%;margin:8px 0}.symbol-settings small{line-height:1.7;color:#adc0d0}

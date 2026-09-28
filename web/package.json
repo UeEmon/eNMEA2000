@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "cesium": "1.145.0"
+    "cesium": "1.145.0",
+    "milsymbol": "3.0.3"
   }
 }
