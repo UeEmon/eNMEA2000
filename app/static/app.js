@@ -31,7 +31,7 @@ function renderAlerts(){const area=$('watchAlerts');area.replaceChildren();
 async function focusAlert(item){const request=++focusRequest;
   try{const row=await api('/api/vessels/'+encodeURIComponent(item.mmsi)+'/position');
     if(request!==focusRequest)return;if(!globe){toast('地図の読み込みをお待ちください');return}
-    focusedMmsi=row.mmsi;focusedRow=row;selectedSymbol=row;firstFix=false;
+    selectTrack(row);firstFix=false;
     draw(filtered());renderAlerts();$('detail').textContent=JSON.stringify(row,null,2);
     $('cesium').scrollIntoView({block:'center',behavior:'instant'});
     globe.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(row.longitude,row.latitude,120000),
@@ -52,15 +52,15 @@ function mapSymbolAt(screen){const nearby=[...symbolRows].map(([entity,row])=>{
   const picked=globe.scene.pick(screen)?.id;return symbolRows.get(picked)}
 function showMapQuick(event){if(!globe)return;const rect=globe.canvas.getBoundingClientRect();
   const row=mapSymbolAt(new Cesium.Cartesian2(event.clientX-rect.left,event.clientY-rect.top));
-  if(!row?.mmsi){closeMapQuick();return}selectedSymbol=row;
+  if(!row?.mmsi){closeMapQuick();return}selectTrack(row);
   const menu=$('mapQuickMenu');$('mapQuickTitle').textContent='MMSI '+row.mmsi;
   menu.hidden=false;menu.style.left=Math.max(8,Math.min(event.clientX,innerWidth-menu.offsetWidth-8))+'px';
   menu.style.top=Math.max(8,Math.min(event.clientY,innerHeight-menu.offsetHeight-8))+'px';
   $('mapQuickRegister').focus()}
 async function api(url,options={}){const r=await fetch(url,options);if(r.status===401){disconnect();if(!$('login').open)$('login').showModal();throw Error('ログインが必要です')}if(!r.ok){let body=await r.json().catch(()=>({}));throw Error(body.detail||`HTTP ${r.status}`)}return r.json()}
 function disconnect(){active=false;clearInterval(timer);clearTimeout(reconnect);if(socket){socket.onclose=null;socket.close();socket=null}$('light').className='';$('connection').textContent='未接続'}
-function clearDisplay(){rows=[];focusedMmsi=null;focusedRow=null;focusRequest++;identityByMmsi.clear();symbolRows.clear();watchAlerts=[];renderAlerts();closeMapQuick();$('rows').replaceChildren();$('detail').textContent='センテンスを選択してください。';$('points').textContent='位置情報を待っています';firstFix=true;if(globe){globe.selectedEntity=undefined;globeEntities.forEach(entity=>globe.entities.remove(entity));globeEntities=[]}}
-function merge(data){const byId=new Map(rows.map(r=>[r.id,r]));for(const r of data){byId.set(r.id,r);
+function clearDisplay(){clearTrackSelection(false);rows=[];focusedMmsi=null;focusedRow=null;focusRequest++;identityByMmsi.clear();symbolRows.clear();watchAlerts=[];renderAlerts();closeMapQuick();$('rows').replaceChildren();$('detail').textContent='センテンスを選択してください。';$('points').textContent='位置情報を待っています';firstFix=true;if(globe){globe.selectedEntity=undefined;globeEntities.forEach(entity=>globe.entities.remove(entity));globeEntities=[]}}
+function merge(data){retainTrackRows(data);const byId=new Map(rows.map(r=>[r.id,r]));for(const r of data){byId.set(r.id,r);
   if(r.mmsi&&r.decoded?.msg_type===5)identityByMmsi.set(r.mmsi,{imo:String(r.decoded.imo||''),shipname:r.decoded.shipname})}
   rows=[...byId.values()].sort((a,b)=>b.id-a.id).slice(0,500);render()}
 function filtered(){const search=$('search').value.toLowerCase(), source=$('source').value;return rows.filter(r=>(source==='all'||r.source.startsWith(source+':'))&&(!search||JSON.stringify(r).toLowerCase().includes(search)))}
@@ -69,7 +69,7 @@ function draw(view){
   if(!globe)return;
   globeEntities.forEach(entity=>globe.entities.remove(entity));globeEntities=[];symbolRows.clear();
   const pts=view.filter(r=>r.latitude!==null&&r.longitude!==null);
-  if(focusedMmsi){const latest=rows.find(r=>r.mmsi===focusedMmsi&&r.status==='ok'&&r.latitude!==null&&r.longitude!==null);
+  if(focusedRow){const latest=trackHistory.find(hasPosition);
     if(latest&&(!focusedRow||latest.id>focusedRow.id))focusedRow=latest;
     if(focusedRow&&!pts.some(r=>r.id===focusedRow.id))pts.unshift(focusedRow)}
   const tracks=new Map();
@@ -92,20 +92,21 @@ function draw(view){
       ...NmeaSymbols.graphics({own:!latest.mmsi,watched,selected:latest.mmsi===focusedMmsi&&latest.id===focusedRow?.id}),
       label:{text:latest.mmsi||'GPS',font:'12px sans-serif',fillColor:Cesium.Color.WHITE,showBackground:true,
              pixelOffset:new Cesium.Cartesian2(0,-34),distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,3000000)}});
-    globeEntities.push(symbol);if(latest.mmsi)symbolRows.set(symbol,latest);
+    globeEntities.push(symbol);symbolRows.set(symbol,latest);
     if(latest.mmsi===focusedMmsi&&latest.id===focusedRow?.id){globe.selectedEntity=symbol;selectedSymbol=latest}
     if(Number.isFinite(cog) && cog>=0 && cog<360){
       const d=.012,r=cog*Math.PI/180, nextLat=lat+d*Math.cos(r),nextLon=lon+d*Math.sin(r)/Math.max(.1,Math.cos(lat*Math.PI/180));
       globeEntities.push(globe.entities.add({polyline:{positions:Cesium.Cartesian3.fromDegreesArray([lon,lat,nextLon,nextLat]),width:2,material:color}}));
     }
   }
+  renderTrackDetails();
   $('points').textContent=`${pts.length} ポイント / ${tracks.size} トラック`;
   if(firstFix&&pts.length){firstFix=false;const p=pts[0];globe.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(p.longitude,p.latitude,350000),duration:1.3})}
 }
 async function initGlobe(){
   if(!window.Cesium){toast('Cesiumの読み込みに失敗しました');return}
   globe=new Cesium.Viewer('cesium',{baseLayer:false,baseLayerPicker:false,geocoder:false,homeButton:true,
-    navigationHelpButton:false,animation:false,timeline:false,sceneModePicker:true,terrainProvider:new Cesium.EllipsoidTerrainProvider()});
+    infoBox:false,navigationHelpButton:false,animation:false,timeline:false,sceneModePicker:true,terrainProvider:new Cesium.EllipsoidTerrainProvider()});
   globe.scene.globe.baseColor=Cesium.Color.fromCssColorString('#193349');
   globe.camera.setView({destination:Cesium.Cartesian3.fromDegrees(139.75,35.65,3000000)});
   document.addEventListener('contextmenu',event=>{if($('cesium').contains(event.target))event.preventDefault()},true);
@@ -113,7 +114,7 @@ async function initGlobe(){
   document.addEventListener('pointerdown',event=>{if(!$('mapQuickMenu').contains(event.target))closeMapQuick()});
   document.addEventListener('keydown',event=>{if(event.key==='Escape')closeMapQuick()});
   globe.screenSpaceEventHandler.setInputAction(event=>{const row=mapSymbolAt(event.position);
-    if(row)$('detail').textContent=JSON.stringify(row,null,2);closeMapQuick()},Cesium.ScreenSpaceEventType.LEFT_CLICK);
+    if(row)selectTrack(row);else clearTrackSelection();closeMapQuick()},Cesium.ScreenSpaceEventType.LEFT_CLICK);
   try {
     const imagery=await Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII'));
     globe.imageryLayers.addImageryProvider(imagery);
@@ -127,6 +128,7 @@ async function start(){await Promise.all([refresh(),loadWatch(),api('/api/watch-
 $('loginForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:$('token').value})});$('token').value='';$('loginError').textContent='';$('login').close();await start()}catch(err){$('loginError').textContent=err.message}};
 $('logout').onclick=async()=>{await api('/api/logout',{method:'POST'});disconnect();clearDisplay();render();$('login').showModal()};
 NmeaSymbols.bind($('symbolStandard'),()=>draw(filtered()));
+$('trackClose').onclick=()=>clearTrackSelection();
 $('watchAdd').onclick=()=>watchEditor();$('watchCancel').onclick=()=>$('watchDialog').close();
 $('mapQuickRegister').onclick=()=>{if(selectedSymbol)openSymbolWatch(selectedSymbol)};
 $('mapQuickCenter').onclick=()=>{if(selectedSymbol)globe.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(selectedSymbol.longitude,selectedSymbol.latitude,120000)});closeMapQuick()};
