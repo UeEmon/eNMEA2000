@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 from pyais.encode import encode_dict
+from ais_suite import SCENARIOS, BY_ID
 
 HOST=os.getenv('NMEA_TARGET_HOST','host.docker.internal')
 PORT=int(os.getenv('NMEA_TARGET_PORT','10111'))
@@ -255,5 +256,39 @@ async def set_course(course:Course):
 @app.post('/api/stop')
 async def stop():
     await sim.stop();return sim.status()
+
+class AisSuiteRequest(BaseModel):
+    scenario_ids: list[str] = Field(min_length=1, max_length=50)
+
+@app.get('/api/ais/scenarios')
+def ais_scenarios():
+    return {'scenarios': [scenario.public() for scenario in SCENARIOS],
+            'types': sorted({scenario.message_type for scenario in SCENARIOS})}
+
+@app.post('/api/ais/send')
+async def send_ais_scenarios(request: AisSuiteRequest):
+    if len(set(request.scenario_ids)) != len(request.scenario_ids):
+        raise HTTPException(422, 'Duplicate scenario id')
+    unknown = [id for id in request.scenario_ids if id not in BY_ID]
+    if unknown:
+        raise HTTPException(422, 'Unknown scenario id')
+    selected = [BY_ID[id] for id in request.scenario_ids]
+    frames = [frame for scenario in selected for frame in scenario.frames]
+    writer = None
+    try:
+        _, writer = await asyncio.wait_for(asyncio.open_connection(HOST, PORT), 5)
+        writer.write(('\r\n'.join(frames) + '\r\n').encode('ascii'))
+        await asyncio.wait_for(writer.drain(), 5)
+    except (OSError, asyncio.TimeoutError) as exc:
+        raise HTTPException(503, f'TCP送信に失敗しました: {str(exc)[:160]}') from exc
+    finally:
+        if writer is not None:
+            writer.close()
+            with contextlib.suppress(Exception):
+                await writer.wait_closed()
+    sim.lines += len(frames)
+    sim.preview = (sim.preview + frames)[-12:]
+    return {'sent': len(selected), 'sentences': len(frames),
+            'scenarios': [scenario.id for scenario in selected], 'target': f'{HOST}:{PORT}'}
 
 app.mount('/static', StaticFiles(directory=Path(__file__).parent/'static'),name='static')

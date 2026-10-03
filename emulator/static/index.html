@@ -49,6 +49,13 @@
       <div class="actions"><button type="submit">送信開始・設定反映</button><button class="secondary" id="stop" type="button">停止</button></div>
     </form></section>
     <section class="card status"><h2>連接状況</h2><p>送信先 <b id="target">—</b></p><p>現在位置 <b id="position">—</b></p><p>現在針路・速力 <b id="currentMotion">—</b></p><p>航路進捗 <b id="routeProgress">—</b></p><p>累計センテンス <b id="lines">0</b></p><p id="error" role="alert"></p><details><summary>最新のNMEA文を見る</summary><pre id="preview">送信待機中</pre></details></section>
+    <section class="card ais-suite"><h2>AIS 全Type試験</h2><p>固定試験文をTCPへ送信します。Type 0は旧形式、Type 1～28を収録。定期送信とは独立して実行できます。</p>
+      <label for="aisScenario">試験項目</label><select id="aisScenario" aria-label="AIS試験項目"></select>
+      <div class="actions"><button type="button" id="sendScenario">選択項目を送信</button><button type="button" class="secondary" id="sendAllScenarios">全項目を送信</button></div>
+      <p id="suiteCoverage" aria-live="polite">試験項目を読み込み中</p><p id="suiteResult" role="status"></p>
+      <details><summary>選択項目の送信文</summary><pre id="suiteFrames"></pre></details>
+      <p>送信完了はTCPへの書き込みを示します。受信・解析結果は本体のデータ画面で確認してください。</p>
+    </section>
   </aside>
 </main>
 <footer>Natural Earth背景図を同梱 · 航路編集は送信中も反映 · 航海・測位用途には使用しないでください</footer>

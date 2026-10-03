@@ -7,6 +7,19 @@ const inputForType={rmc:'rmc',gga:'gga',ais1:'ais_type1',ais5:'ais_type5'};
 const ais5Fields=['repeat','ais_version','imo','callsign','shipname','ship_type','to_bow','to_stern','to_port','to_starboard','epfd','month','day','hour','minute','draught','destination','dte'];
 const ais5Text=['callsign','shipname','destination'];
 let configLoaded=false;
+let aisScenarios=[];
+function selectedAisScenario(){return aisScenarios.find(item=>item.id===e('aisScenario').value)}
+function showAisScenario(){const item=selectedAisScenario();e('suiteFrames').textContent=item?.frames.join('\n')||''}
+async function loadAisScenarios(){try{const data=await api('/api/ais/scenarios');aisScenarios=data.scenarios;
+  const select=e('aisScenario');select.replaceChildren();for(const item of aisScenarios){const option=document.createElement('option');option.value=item.id;option.textContent=item.label+' · '+item.sentences+'文';select.append(option)}
+  e('suiteCoverage').textContent=`${data.types.length} Type / ${aisScenarios.length}項目（分割・形式別を含む）`;showAisScenario()
+}catch(err){e('suiteResult').textContent=err.message}}
+async function sendAisScenarios(ids){const buttons=[e('sendScenario'),e('sendAllScenarios')];buttons.forEach(button=>button.disabled=true);
+  try{const result=await api('/api/ais/send',{scenario_ids:ids});e('suiteResult').textContent=`TCP送信完了: ${result.sent}項目 / ${result.sentences}文 → ${result.target}`;refresh()}
+  catch(err){e('suiteResult').textContent=`送信失敗: ${err.message}`}finally{buttons.forEach(button=>button.disabled=false)}}
+e('aisScenario').onchange=showAisScenario;
+e('sendScenario').onclick=()=>{if(selectedAisScenario())sendAisScenarios([e('aisScenario').value])};
+e('sendAllScenarios').onclick=()=>{if(aisScenarios.length)sendAisScenarios(aisScenarios.map(item=>item.id))};
 for(const key of ais5Text)e('ais5_'+key).addEventListener('input',event=>{event.target.value=event.target.value.toUpperCase()});
 function activateTab(type){for(const name of types){const selected=name===type,tab=e('tab-'+name);tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;e('panel-'+name).hidden=!selected}}
 function updateTypeTabs(){for(const name of types)e('tab-'+name).dataset.enabled=e(inputForType[name]).checked?'true':'false'}
@@ -121,4 +134,4 @@ e('config').onsubmit=async event=>{event.preventDefault();const data={};for(cons
   data.mmsi_start=Number(e('mmsi_start').value);data.ais5={};for(const key of ais5Fields){const value=e('ais5_'+key).value;data.ais5[key]=ais5Text.includes(key)?value:key==='dte'?value==='true':Number(value)}
   data.gps=true;data.ais=true;data.route={waypoints:route,loop:e('loop').checked};busy=true;try{updateStatus(await api('/api/start',data))}catch(err){error(err)}finally{busy=false}};
 e('stop').onclick=async()=>{busy=true;try{updateStatus(await api('/api/stop',{}))}catch(err){error(err)}finally{busy=false}};
-initMap();refresh();setInterval(refresh,1000);
+initMap();refresh();loadAisScenarios();setInterval(refresh,1000);

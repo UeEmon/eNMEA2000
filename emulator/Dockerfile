@@ -9,6 +9,7 @@ WORKDIR /srv
 COPY emulator/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && useradd --uid 10002 -m sim
 COPY --chown=sim:sim emulator/server.py ./server.py
+COPY --chown=sim:sim emulator/ais_suite.py emulator/ais-all-types.log ./
 COPY --chown=sim:sim emulator/static ./static
 COPY --from=cesium-assets --chown=sim:sim /web/node_modules/cesium/Build/Cesium ./static/cesium
 COPY --from=cesium-assets --chown=sim:sim /web/node_modules/cesium/LICENSE.md ./static/cesium/LICENSE.md
