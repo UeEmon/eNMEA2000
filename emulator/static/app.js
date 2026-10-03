@@ -9,6 +9,26 @@ const ais5Text=['callsign','shipname','destination'];
 let configLoaded=false;
 let aisScenarios=[];
 let suiteMarkers=[];
+let motionLoaded=false;
+function applyMotion(state){
+  if(state.active||(!motionLoaded&&state.markers.length)){
+    suiteMarkers=state.markers;e('suiteLat').value=state.center.lat;e('suiteLon').value=state.center.lon;e('suiteSpacing').value=state.spacing_nm}
+  motionLoaded=true;
+  for(const id of ['suiteLat','suiteLon','suiteSpacing','sendAllScenarios'])e(id).disabled=state.active;
+  e('mapMode').querySelector('option[value="suite-center"]').disabled=state.active;
+  e('ringMotionStatus').textContent=(state.active?(state.connected?'周回送信中':'TCP再接続中'):'周回停止中')+
+    (state.markers.length?` · 更新 ${state.interval.toFixed(2)}秒 / ${state.angular_step_deg.toFixed(3)}° · 外周移動 ${(state.movement_nm.at(-1).distance*1852).toFixed(1)}m/更新`:'')+
+    (state.error?' · '+state.error:'');
+  if(state.active&&mode==='suite-center')setMode('pan');
+}
+function ringRequest(){const center=suiteCenter(),spacing=Number(e('suiteSpacing').value);
+  if(!Number.isFinite(center.lat)||Math.abs(center.lat)>89||!Number.isFinite(center.lon)||Math.abs(center.lon)>180||!Number.isFinite(spacing)||spacing<.2||spacing>20)throw Error('中心座標または間隔を確認してください');
+  return {scenario_ids:aisScenarios.map(item=>item.id),center,spacing_nm:spacing}}
+e('startRingMotion').onclick=async()=>{if(!aisScenarios.length)return;e('startRingMotion').disabled=true;
+  try{const request=ringRequest();applyMotion(await api('/api/ais/motion/start',request));if(current)renderMap(current);
+    viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(request.center.lon,request.center.lat,Math.max(50000,request.spacing_nm*1852*28))})}
+  catch(err){e('suiteResult').textContent=err.message}finally{e('startRingMotion').disabled=false}};
+e('stopRingMotion').onclick=async()=>{try{const state=await api('/api/ais/motion/stop',{});suiteMarkers=state.markers;applyMotion(state);if(current)renderMap(current)}catch(err){e('suiteResult').textContent=err.message}};
 function suiteCenter(){return {lat:Number(e('suiteLat').value),lon:Number(e('suiteLon').value)}}
 function setSuiteCenter(point){e('suiteLat').value=point.lat;e('suiteLon').value=point.lon;suiteMarkers=[];if(current)renderMap(current)}
 function selectedAisScenario(){return aisScenarios.find(item=>item.id===e('aisScenario').value)}
@@ -111,7 +131,7 @@ function updateStatus(s){current=s;route=s.config.route.waypoints;looping=s.conf
   e('routeProgress').textContent=s.route_done?'到着':route.length?`${Math.min(s.route_index+1,route.length)} / ${route.length}`:'航路なし';
   e('preview').textContent=s.preview.join('\n')||'送信待機中';e('error').textContent=s.error||'';
   renderMap(s)}
-async function refresh(){if(busy||drag)return;try{updateStatus(await api('/api/status'))}catch(err){error(err)}}
+async function refresh(){if(busy||drag)return;try{const [status,motion]=await Promise.all([api('/api/status'),api('/api/ais/motion')]);applyMotion(motion);updateStatus(status)}catch(err){error(err)}}
 function initMap(){if(!window.Cesium){e('error').textContent='Cesiumの読み込みに失敗しました';return}
   viewer=new Cesium.Viewer('map',{baseLayer:false,baseLayerPicker:false,geocoder:false,timeline:false,animation:false,navigationHelpButton:false,sceneModePicker:true,terrainProvider:new Cesium.EllipsoidTerrainProvider()});
   viewer.scene.globe.baseColor=Cesium.Color.fromCssColorString('#173549');

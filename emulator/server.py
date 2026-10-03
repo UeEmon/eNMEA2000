@@ -4,6 +4,7 @@ import contextlib
 from datetime import datetime, timezone
 import math
 import os
+import time
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
@@ -209,7 +210,9 @@ sim=Simulator()
 @asynccontextmanager
 async def lifespan(app):
     try:yield
-    finally:await sim.stop()
+    finally:
+        await sim.stop()
+        await ring_motion.stop()
 app=FastAPI(title='NMEA TCP Emulator',lifespan=lifespan,openapi_url=None,docs_url=None,redoc_url=None)
 
 @app.middleware('http')
@@ -262,8 +265,14 @@ class AisSuiteRequest(BaseModel):
     center: Waypoint | None = None
     spacing_nm: float = Field(2, ge=0.2, le=20)
 
+    @model_validator(mode='after')
+    def valid_scenarios(self):
+        if len(set(self.scenario_ids)) != len(self.scenario_ids) or any(id not in BY_ID for id in self.scenario_ids):
+            raise ValueError('Unknown or duplicate scenario id')
+        return self
 
-def ais_ring_layout(center: Waypoint, spacing_nm: float, selected):
+
+def ais_ring_layout(center: Waypoint, spacing_nm: float, selected, phase=0):
     """One marker per scenario; rings have approximately equal chord spacing."""
     markers = []
     offset = 0
@@ -272,13 +281,14 @@ def ais_ring_layout(center: Waypoint, spacing_nm: float, selected):
         count = min(7 * ring, len(selected) - offset)
         for slot in range(count):
             scenario = selected[offset + slot]
-            lat, lon = destination(center.lat, center.lon, slot * 360 / count,
+            angle = (slot * 360 / count + phase) % 360
+            lat, lon = destination(center.lat, center.lon, angle,
                                    ring * spacing_nm)
             index = SCENARIOS.index(scenario)
             mmsi = (980000000 if scenario.id == 'type-24-aux' else 431800000) + index
             markers.append(dict(id=scenario.id, label=scenario.label,
                                 message_type=scenario.message_type, mmsi=mmsi,
-                                lat=round(lat, 6), lon=round(lon, 6), ring=ring))
+                                lat=round(lat, 6), lon=round(lon, 6), ring=ring, angle=angle))
         offset += count
         ring += 1
     return markers
@@ -326,3 +336,131 @@ async def send_ais_scenarios(request: AisSuiteRequest):
             'markers': markers}
 
 app.mount('/static', StaticFiles(directory=Path(__file__).parent/'static'),name='static')
+
+
+class RingMotion:
+    def __init__(self):
+        self.task = None
+        self.active = False
+        self.connected = False
+        self.error = ''
+        self.markers = []
+        self.phase = 0
+        self.cycles = 0
+        self.interval = 1
+        self.rate = 0
+        self.request = None
+        self.lock = asyncio.Lock()
+
+    def configure(self, request):
+        self.request = request
+        self.selected = [BY_ID[id] for id in request.scenario_ids]
+        self.markers = ais_ring_layout(request.center, request.spacing_nm, self.selected)
+        counts = [sum(m['ring'] == ring for m in self.markers)
+                  for ring in {m['ring'] for m in self.markers}]
+        outer_radius = max(m['ring'] for m in self.markers) * request.spacing_nm
+        # Cross one symbol gap in two minutes, capped at 80 kt on the outer ring.
+        self.rate = min(360 / max(counts) / 120,
+                        math.degrees(80 / outer_radius / 3600))
+        # Limit baseline load to 60 position sentences/s; reserve 75% processing time.
+        self.interval = max(1, len(self.markers) / 60)
+        self.phase = 0
+        self.cycles = 0
+        self.error = ''
+
+    def status(self):
+        return dict(active=self.active, connected=self.connected, error=self.error,
+                    interval=self.interval, angular_step_deg=self.rate * self.interval,
+                    angular_rate_deg_s=self.rate, cycles=self.cycles, markers=self.markers,
+                    center=self.request.center.model_dump() if self.request else None,
+                    spacing_nm=self.request.spacing_nm if self.request else None,
+                    movement_nm=[dict(ring=ring, distance=math.radians(self.rate * self.interval)
+                                     * ring * self.request.spacing_nm)
+                                 for ring in sorted({m['ring'] for m in self.markers})]
+                    if self.request else [])
+
+    async def stop(self):
+        self.active = False
+        if self.task:
+            self.task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self.task
+            self.task = None
+        self.connected = False
+
+    def frames_at(self, phase):
+        markers = ais_ring_layout(self.request.center, self.request.spacing_nm, self.selected, phase)
+        frames = []
+        for marker in markers:
+            radius = marker['ring'] * self.request.spacing_nm
+            next_lat, next_lon = destination(self.request.center.lat, self.request.center.lon,
+                                            marker['angle'] + .01, radius)
+            _, course = navigation(marker['lat'], marker['lon'], Waypoint.model_construct(lat=next_lat, lon=next_lon))
+            speed = math.radians(self.rate) * radius * 3600
+            frames.extend(encode_dict({'msg_type': 1, 'mmsi': marker['mmsi'],
+                                       'lat': marker['lat'], 'lon': marker['lon'],
+                                       'speed': round(speed, 1), 'course': round(course, 1) % 360,
+                                       'heading': int(course)}, talker_id='AI', sentence_type='VDM'))
+        return markers, frames
+
+    async def run(self):
+        while self.active:
+            writer = None
+            try:
+                _, writer = await asyncio.wait_for(asyncio.open_connection(HOST, PORT), 5)
+                self.connected = True
+                self.error = ''
+                previous = time.monotonic()
+                while self.active:
+                    await asyncio.sleep(self.interval)
+                    started = time.monotonic()
+                    phase = (self.phase + self.rate * (started - previous)) % 360
+                    markers, frames = self.frames_at(phase)
+                    writer.write(('\r\n'.join(frames) + '\r\n').encode('ascii'))
+                    await asyncio.wait_for(writer.drain(), 5)
+                    self.phase = phase
+                    self.markers = markers
+                    previous = started
+                    self.cycles += 1
+                    sim.lines += len(frames)
+                    sim.preview = (sim.preview + frames)[-12:]
+                    cost = time.monotonic() - started
+                    target = max(1, len(markers) / 60, cost * 4)
+                    self.interval = min(10, max(target, self.interval * .8))
+            except asyncio.CancelledError:
+                raise
+            except (OSError, asyncio.TimeoutError) as exc:
+                self.error = str(exc)[:180]
+                self.connected = False
+                await asyncio.sleep(2)
+            finally:
+                self.connected = False
+                if writer:
+                    writer.close()
+                    with contextlib.suppress(Exception):
+                        await writer.wait_closed()
+
+
+ring_motion = RingMotion()
+
+@app.get('/api/ais/motion')
+def motion_status():
+    return ring_motion.status()
+
+@app.post('/api/ais/motion/start')
+async def motion_start(request: AisSuiteRequest):
+    if request.center is None:
+        raise HTTPException(422, '中心位置を指定してください')
+    async with ring_motion.lock:
+        await ring_motion.stop()
+        await send_ais_scenarios(request)
+        ring_motion.configure(request)
+        ring_motion.active = True
+        ring_motion.task = asyncio.create_task(ring_motion.run())
+        return ring_motion.status()
+
+@app.post('/api/ais/motion/stop')
+async def motion_stop():
+    async with ring_motion.lock:
+        await ring_motion.stop()
+        return ring_motion.status()
