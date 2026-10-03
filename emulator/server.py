@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 from pyais.encode import encode_dict
-from ais_suite import SCENARIOS, BY_ID
+from ais_suite import SCENARIOS, BY_ID, with_mmsi
 
 HOST=os.getenv('NMEA_TARGET_HOST','host.docker.internal')
 PORT=int(os.getenv('NMEA_TARGET_PORT','10111'))
@@ -259,6 +259,29 @@ async def stop():
 
 class AisSuiteRequest(BaseModel):
     scenario_ids: list[str] = Field(min_length=1, max_length=50)
+    center: Waypoint | None = None
+    spacing_nm: float = Field(2, ge=0.2, le=20)
+
+
+def ais_ring_layout(center: Waypoint, spacing_nm: float, selected):
+    """One marker per scenario; rings have approximately equal chord spacing."""
+    markers = []
+    offset = 0
+    ring = 1
+    while offset < len(selected):
+        count = min(7 * ring, len(selected) - offset)
+        for slot in range(count):
+            scenario = selected[offset + slot]
+            lat, lon = destination(center.lat, center.lon, slot * 360 / count,
+                                   ring * spacing_nm)
+            index = SCENARIOS.index(scenario)
+            mmsi = (980000000 if scenario.id == 'type-24-aux' else 431800000) + index
+            markers.append(dict(id=scenario.id, label=scenario.label,
+                                message_type=scenario.message_type, mmsi=mmsi,
+                                lat=round(lat, 6), lon=round(lon, 6), ring=ring))
+        offset += count
+        ring += 1
+    return markers
 
 @app.get('/api/ais/scenarios')
 def ais_scenarios():
@@ -273,7 +296,17 @@ async def send_ais_scenarios(request: AisSuiteRequest):
     if unknown:
         raise HTTPException(422, 'Unknown scenario id')
     selected = [BY_ID[id] for id in request.scenario_ids]
-    frames = [frame for scenario in selected for frame in scenario.frames]
+    markers = ais_ring_layout(request.center, request.spacing_nm, selected) if request.center else []
+    if markers:
+        frames = []
+        for scenario, marker in zip(selected, markers):
+            frames.extend(with_mmsi(scenario.frames, marker['mmsi']))
+            frames.extend(encode_dict({'msg_type': 1, 'mmsi': marker['mmsi'],
+                                       'lat': marker['lat'], 'lon': marker['lon'],
+                                       'speed': 0, 'course': 0, 'heading': 0},
+                                      talker_id='AI', sentence_type='VDM'))
+    else:
+        frames = [frame for scenario in selected for frame in scenario.frames]
     writer = None
     try:
         _, writer = await asyncio.wait_for(asyncio.open_connection(HOST, PORT), 5)
@@ -289,6 +322,7 @@ async def send_ais_scenarios(request: AisSuiteRequest):
     sim.lines += len(frames)
     sim.preview = (sim.preview + frames)[-12:]
     return {'sent': len(selected), 'sentences': len(frames),
-            'scenarios': [scenario.id for scenario in selected], 'target': f'{HOST}:{PORT}'}
+            'scenarios': [scenario.id for scenario in selected], 'target': f'{HOST}:{PORT}',
+            'markers': markers}
 
 app.mount('/static', StaticFiles(directory=Path(__file__).parent/'static'),name='static')
