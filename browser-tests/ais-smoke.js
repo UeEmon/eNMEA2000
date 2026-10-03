@@ -17,6 +17,15 @@ const dgram=require('node:dgram');
     await page.locator('#token').fill(token);
     await page.getByRole('button',{name:'接続する'}).click();
     await page.waitForFunction(()=>active&&globe);
+    async function waitForApi(path,ready){
+      const deadline=Date.now()+15000;
+      while(Date.now()<deadline){
+        const response=await page.request.get(path);assert(response.ok());
+        const data=await response.json();if(ready(data))return data;
+        await page.waitForTimeout(100);
+      }
+      throw Error('Timed out waiting for API result: '+path);
+    }
     function validate(rows){
       assert.equal(rows.length,frames.length);
       assert.equal(rows.filter(row=>row.status==='pending').length,1);
@@ -33,13 +42,9 @@ const dgram=require('node:dgram');
     }
     async function checkSource(source){
       assert.equal(typeof source,'string');
-      await page.waitForFunction(async source=>{
-        const rows=await fetch('/api/events?limit=100&source='+encodeURIComponent(source)).then(r=>r.json());
-        return rows.length===32;
-      },source,{timeout:15000});
       const query=new URLSearchParams({source,limit:'100'});
-      const response=await page.request.get('/api/events?'+query);
-      assert(response.ok());const rows=await response.json();validate(rows);
+      const rows=await waitForApi('/api/events?'+query,rows=>rows.length===frames.length);
+      validate(rows);
       const exported=await page.request.get('/api/export/jsonl?'+new URLSearchParams({source}));
       assert(exported.ok());validate((await exported.text()).trim().split('\n').map(line=>JSON.parse(line)));
       return rows;
@@ -58,19 +63,15 @@ const dgram=require('node:dgram');
       });
       // Docker may translate the host address and source port. Resolve the
       // durable source from the unique Type 0 fixture received after this send.
-      const found=await page.waitForFunction(async({before,protocol,raw})=>{
-        const rows=await fetch('/api/events?limit=200&after='+before).then(r=>r.json());
-        return rows.find(row=>row.source.startsWith(protocol+':')&&row.raw===raw)?.source;
-      },{before,protocol,raw:frames[0]},{timeout:15000});
-      const source=await found.jsonValue();await found.dispose();
+      const received=await waitForApi('/api/events?limit=200&after='+before,
+        rows=>rows.some(row=>row.source.startsWith(protocol+':')&&row.raw===frames[0]));
+      const source=received.find(row=>row.source.startsWith(protocol+':')&&row.raw===frames[0]).source;
       await checkSource(source);
     }
     const uploaded=await page.request.post('/api/files?filename=ais-all-types.log',{
       data:payload,headers:{'Content-Type':'application/octet-stream'}});
     assert.equal(uploaded.status(),202);const job=await uploaded.json();
-    await page.waitForFunction(async id=>{
-      const jobs=await fetch('/api/jobs').then(r=>r.json());return jobs.find(job=>job.id===id)?.status==='completed';
-    },job.id,{timeout:15000});
+    await waitForApi('/api/jobs',jobs=>jobs.find(item=>item.id===job.id)?.status==='completed');
     const rows=await checkSource('file:'+job.id);
     await page.locator('#source').selectOption('file');
     await page.locator('#search').fill('ais-all-types.log');
