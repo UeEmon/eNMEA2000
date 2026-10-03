@@ -274,6 +274,7 @@ class AisSuiteRequest(BaseModel):
 
 def ais_ring_layout(center: Waypoint, spacing_nm: float, selected, phase=0):
     """One marker per scenario; rings have approximately equal chord spacing."""
+    phase %= 360
     markers = []
     offset = 0
     ring = 1
