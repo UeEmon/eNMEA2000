@@ -11,7 +11,7 @@ const dgram=require('node:dgram');
   const frames=payload.toString().trim().split(/\r?\n/);
   const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
   try{
-    const page=await browser.newPage({viewport:{width:1500,height:1000}});
+    const page=await browser.newPage({baseURL:'http://127.0.0.1:18081',viewport:{width:1500,height:1000}});
     const errors=[];page.on('pageerror',err=>errors.push(err.message));
     await page.goto('http://127.0.0.1:18081');
     await page.locator('#token').fill(token);
