@@ -23,22 +23,30 @@ const fs=require('node:fs');
     assert.equal(catalog.scenarios.length,42);
     await page.locator('#aisScenario').selectOption('type-5');
     assert((await page.locator('#suiteFrames').textContent()).split('\n').length===2);
+    await page.locator('#suiteLat').fill('34.5');
+    await page.locator('#suiteLon').fill('135.5');
+    await page.locator('#suiteSpacing').fill('2');
     await page.locator('#sendAllScenarios').click();
-    await page.waitForFunction(()=>document.querySelector('#suiteResult').textContent.includes('42項目 / 45文'),null,{timeout:15000});
+    await page.waitForFunction(()=>document.querySelector('#suiteResult').textContent.includes('42項目 / 87文'),null,{timeout:15000});
+    assert.equal(await page.evaluate(()=>viewer.entities.values.filter(item=>item.id.startsWith('sim-suite-type-')).length),42);
+    const markers=await page.evaluate(()=>suiteMarkers);
+    assert.deepEqual([1,2,3].map(ring=>markers.filter(item=>item.ring===ring).length),[7,14,21]);
     const deadline=Date.now()+20000;
     let received=[];
     while(Date.now()<deadline){
       const response=await app.request.get('http://127.0.0.1:18081/api/events?limit=300&after='+before);
       assert(response.ok());
       const rows=await response.json();
-      const marker=rows.find(row=>row.raw===catalog.scenarios[0].frames[0]&&row.source.startsWith('tcp:'));
-      if(marker){received=rows.filter(row=>row.source===marker.source);if(received.length>=45)break}
+      const marker=rows.find(row=>row.ais_type===0&&row.mmsi===String(markers[0].mmsi)&&row.source.startsWith('tcp:'));
+      if(marker){received=rows.filter(row=>row.source===marker.source);if(received.length>=87)break}
       await page.waitForTimeout(150);
     }
-    assert.equal(received.length,45);
+    assert.equal(received.length,87);
     assert.deepEqual([...new Set(received.filter(row=>row.status==='ok').map(row=>row.ais_type))].sort((a,b)=>a-b),catalog.types);
     assert.equal(received.filter(row=>row.status==='pending').length,3);
+    for(const marker of markers){const position=received.findLast(row=>row.ais_type===1&&row.mmsi===String(marker.mmsi));
+      assert(position,marker.id);assert(Math.abs(position.latitude-marker.lat)<.00001);assert(Math.abs(position.longitude-marker.lon)<.00001)}
     assert.deepEqual(errors,[]);
-    console.log('PASS: emulator UI sent all 42 AIS scenarios over TCP; all 29 types persisted');
+    console.log('PASS: emulator UI sent all 42 AIS scenarios on three concentric rings; 29 types and positions persisted');
   }finally{await browser.close()}
 })().catch(error=>{console.error(error);process.exit(1)});

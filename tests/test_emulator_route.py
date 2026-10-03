@@ -4,7 +4,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'emulator'))
 from fastapi.testclient import TestClient
 from server import Config, Route, Simulator, Waypoint, app, navigation
 from app.parser import Decoder
-from ais_suite import SCENARIOS
+from ais_suite import SCENARIOS, with_mmsi
 
 def test_route_reaches_destination_and_emits_real_nmea():
     sim=Simulator()
@@ -100,6 +100,31 @@ def test_ais_suite_covers_every_type_and_variant_with_valid_wire_frames():
         assert [row['status'] for row in rows[:-1]] == ['pending'] * (len(rows) - 1), scenario.id
         assert rows[-1]['status'] == 'ok', (scenario.id, rows[-1])
         assert rows[-1]['ais_type'] == scenario.message_type
+
+
+def test_all_type_ring_layout_and_unique_mmsi_keep_every_fixture_decodable():
+    from server import ais_ring_layout
+    from pyais.encode import encode_dict
+    from collections import Counter
+    center = Waypoint(lat=35.65, lon=139.75)
+    markers = ais_ring_layout(center, 2, SCENARIOS)
+    assert Counter(marker['ring'] for marker in markers) == {1: 7, 2: 14, 3: 21}
+    assert len({marker['mmsi'] for marker in markers}) == 42
+    for scenario, marker in zip(SCENARIOS, markers):
+        distance, _ = navigation(center.lat, center.lon, Waypoint(lat=marker['lat'], lon=marker['lon']))
+        assert abs(distance - marker['ring'] * 2) < 0.002
+        decoder = Decoder()
+        rows = [decoder.parse(frame, scenario.id) for frame in with_mmsi(scenario.frames, marker['mmsi'])]
+        assert rows[-1]['status'] == 'ok', (scenario.id, rows[-1])
+        assert rows[-1]['mmsi'] == str(marker['mmsi'])
+        assert rows[-1]['ais_type'] == scenario.message_type
+        position = encode_dict({'msg_type': 1, 'mmsi': marker['mmsi'], 'lat': marker['lat'],
+                                'lon': marker['lon'], 'speed': 0, 'course': 0, 'heading': 0},
+                               talker_id='AI', sentence_type='VDM')
+        plotted = decoder.parse(position[0], scenario.id)
+        assert plotted['status'] == 'ok' and plotted['mmsi'] == rows[-1]['mmsi']
+        assert abs(plotted['latitude'] - marker['lat']) < 0.00001
+        assert abs(plotted['longitude'] - marker['lon']) < 0.00001
 
 
 def test_ais_suite_api_sends_selected_scenarios_over_tcp(monkeypatch):

@@ -65,3 +65,19 @@ def _load():
 
 SCENARIOS = _load()
 BY_ID = {scenario.id: scenario for scenario in SCENARIOS}
+
+
+def with_mmsi(frames: tuple[str, ...], mmsi: int) -> tuple[str, ...]:
+    """Give a multipart fixture a unique identity without altering its payload layout."""
+    first, *rest = frames
+    fields = first[1:].split('*', 1)[0].split(',')
+    payload = fields[5]
+    bits = ''.join(f'{ord(char) - (48 if char <= "W" else 56):06b}' for char in payload)
+    bits = bits[:8] + f'{mmsi:030b}' + bits[38:]
+    fields[5] = ''.join(chr(int(bits[i:i + 6], 2) + (48 if int(bits[i:i + 6], 2) < 40 else 56))
+                        for i in range(0, len(bits), 6))
+    body = ','.join(fields)
+    checksum = 0
+    for char in body:
+        checksum ^= ord(char)
+    return (f'!{body}*{checksum:02X}', *rest)

@@ -8,18 +8,27 @@ const ais5Fields=['repeat','ais_version','imo','callsign','shipname','ship_type'
 const ais5Text=['callsign','shipname','destination'];
 let configLoaded=false;
 let aisScenarios=[];
+let suiteMarkers=[];
+function suiteCenter(){return {lat:Number(e('suiteLat').value),lon:Number(e('suiteLon').value)}}
+function setSuiteCenter(point){e('suiteLat').value=point.lat;e('suiteLon').value=point.lon;suiteMarkers=[];if(current)renderMap(current)}
 function selectedAisScenario(){return aisScenarios.find(item=>item.id===e('aisScenario').value)}
 function showAisScenario(){const item=selectedAisScenario();e('suiteFrames').textContent=item?.frames.join('\n')||''}
 async function loadAisScenarios(){try{const data=await api('/api/ais/scenarios');aisScenarios=data.scenarios;
   const select=e('aisScenario');select.replaceChildren();for(const item of aisScenarios){const option=document.createElement('option');option.value=item.id;option.textContent=item.label+' · '+item.sentences+'文';select.append(option)}
   e('suiteCoverage').textContent=`${data.types.length} Type / ${aisScenarios.length}項目（分割・形式別を含む）`;showAisScenario()
 }catch(err){e('suiteResult').textContent=err.message}}
-async function sendAisScenarios(ids){const buttons=[e('sendScenario'),e('sendAllScenarios')];buttons.forEach(button=>button.disabled=true);
-  try{const result=await api('/api/ais/send',{scenario_ids:ids});e('suiteResult').textContent=`TCP送信完了: ${result.sent}項目 / ${result.sentences}文 → ${result.target}`;refresh()}
+async function sendAisScenarios(ids,arrange=false){const buttons=[e('sendScenario'),e('sendAllScenarios')];buttons.forEach(button=>button.disabled=true);
+  try{const request={scenario_ids:ids};if(arrange){const center=suiteCenter(),spacing=Number(e('suiteSpacing').value);
+      if(!Number.isFinite(center.lat)||Math.abs(center.lat)>89||!Number.isFinite(center.lon)||Math.abs(center.lon)>180||!Number.isFinite(spacing)||spacing<.2||spacing>20)throw Error('中心座標または間隔を確認してください');
+      request.center=center;request.spacing_nm=spacing}
+    const result=await api('/api/ais/send',request);if(arrange){suiteMarkers=result.markers;renderMap(current);
+      viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(request.center.lon,request.center.lat,Math.max(50000,request.spacing_nm*1852*28))})}
+    e('suiteResult').textContent=`TCP送信完了: ${result.sent}項目 / ${result.sentences}文 → ${result.target}`;refresh()}
   catch(err){e('suiteResult').textContent=`送信失敗: ${err.message}`}finally{buttons.forEach(button=>button.disabled=false)}}
 e('aisScenario').onchange=showAisScenario;
 e('sendScenario').onclick=()=>{if(selectedAisScenario())sendAisScenarios([e('aisScenario').value])};
-e('sendAllScenarios').onclick=()=>{if(aisScenarios.length)sendAisScenarios(aisScenarios.map(item=>item.id))};
+e('sendAllScenarios').onclick=()=>{if(aisScenarios.length)sendAisScenarios(aisScenarios.map(item=>item.id),true)};
+for(const key of ['suiteLat','suiteLon','suiteSpacing'])e(key).addEventListener('change',()=>{suiteMarkers=[];if(current)renderMap(current)});
 for(const key of ais5Text)e('ais5_'+key).addEventListener('input',event=>{event.target.value=event.target.value.toUpperCase()});
 function activateTab(type){for(const name of types){const selected=name===type,tab=e('tab-'+name);tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;e('panel-'+name).hidden=!selected}}
 function updateTypeTabs(){for(const name of types)e('tab-'+name).dataset.enabled=e(inputForType[name]).checked?'true':'false'}
@@ -37,7 +46,7 @@ document.querySelectorAll('[data-tab]').forEach(button=>{
 updateTypeTabs();
 function round(n){return Number(n.toFixed(6))}
 function setMode(next){mode=next;e('mapMode').value=mode;
-  e('hint').textContent=({pan:'地図を操作できます。開始位置や航路点はドラッグして変更できます。',position:'地図をクリックすると送信位置が移動します。送信中も反映します。',waypoint:'地図をクリックするたび航路点を追加します。指定順に航行します。',heading:'地図をクリックして現在位置からの針路を指定します。既存の航路は解除します。'})[mode]}
+  e('hint').textContent=({pan:'地図を操作できます。開始位置や航路点はドラッグして変更できます。',position:'地図をクリックすると送信位置が移動します。送信中も反映します。','suite-center':'地図をクリックすると全Type試験の中心を指定します。',waypoint:'地図をクリックするたび航路点を追加します。指定順に航行します。',heading:'地図をクリックして現在位置からの針路を指定します。既存の航路は解除します。'})[mode]}
 async function api(path,body){const response=await fetch(path,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});if(!response.ok)throw Error((await response.text()).slice(0,250));return response.json()}
 function error(err){e('error').textContent=err.message||String(err)}
 function mapCoords(screen){const ray=viewer.camera.getPickRay(screen),cart=ray&&viewer.scene.globe.pick(ray,viewer.scene);if(!cart)return null;const p=Cesium.Cartographic.fromCartesian(cart);const lat=round(Cesium.Math.toDegrees(p.latitude)),lon=round(Cesium.Math.toDegrees(p.longitude));return Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=89?{lat,lon}:null}
@@ -55,6 +64,16 @@ function renderMap(status){if(!viewer||drag)return;removeEntities();const p=stat
   for(const vessel of status.vessels){if(vessel.mmsi===status.config.mmsi_start)continue;addPoint('sim-ship-'+vessel.mmsi,vessel.lon,vessel.lat,Cesium.Color.CORNFLOWERBLUE,String(vessel.mmsi),9)}
   route.forEach((q,i)=>addPoint('sim-waypoint-'+i,q.lon,q.lat,Cesium.Color.YELLOW,'WP'+(i+1),11));
   addPoint('sim-start',p.lon,p.lat,Cesium.Color.TURQUOISE,'送信位置',15);
+  const center=suiteCenter();if(Number.isFinite(center.lat)&&Math.abs(center.lat)<=89&&Number.isFinite(center.lon)&&Math.abs(center.lon)<=180){
+    addPoint('sim-suite-center',center.lon,center.lat,Cesium.Color.ORANGE,'試験中心',13);
+    const spacing=Number(e('suiteSpacing').value);
+    if(suiteMarkers.length&&Number.isFinite(spacing)){
+      for(const ring of new Set(suiteMarkers.map(marker=>marker.ring)))
+        displayed.push(viewer.entities.add({id:'sim-suite-ring-'+ring,position:Cesium.Cartesian3.fromDegrees(center.lon,center.lat),ellipse:{semiMajorAxis:ring*spacing*1852,semiMinorAxis:ring*spacing*1852,material:Cesium.Color.ORANGE.withAlpha(.04),outline:true,outlineColor:Cesium.Color.ORANGE.withAlpha(.6)}}));
+      for(const marker of suiteMarkers){const entity=addPoint('sim-suite-'+marker.id,marker.lon,marker.lat,Cesium.Color.ORANGE,'T'+marker.message_type,10);
+        entity.description=`${marker.label} / MMSI ${marker.mmsi} / ${marker.ring}周目`}
+    }
+  }
 }
 function hideQuickMenu(){e('quickMenu').hidden=true}
 function quickAction(label,callback){const button=document.createElement('button');button.type='button';button.setAttribute('role','menuitem');button.textContent=label;
@@ -105,6 +124,7 @@ function initMap(){if(!window.Cesium){e('error').textContent='Cesiumの読み込
     showQuickMenu(new Cesium.Cartesian2(event.clientX-rect.left,event.clientY-rect.top))},true);
   handler.setInputAction(async event=>{hideQuickMenu();if(drag)return;const p=mapCoords(event.position);if(!p||!current)return;
     if(mode==='position')await applyPosition(p);
+    if(mode==='suite-center')setSuiteCenter(p);
     if(mode==='waypoint')await applyRoute([...route,p]);
     if(mode==='heading'){
       const course=round(bearing(current.position,p));busy=true;
