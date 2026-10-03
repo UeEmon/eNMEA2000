@@ -34,9 +34,9 @@ function renderTrackDetails(){
   $('trackEmpty').hidden=!!row;$('trackContent').hidden=!row;$('trackClose').disabled=!row;
   if(!row){$('trackFields').replaceChildren();$('trackHistory').replaceChildren();$('trackRaw').textContent='';$('trackName').textContent='';$('trackStatus').textContent='';return}
   const d=row.decoded||{},positions=trackHistory.filter(hasPosition);
-  const staticRow=trackHistory.find(r=>r.decoded?.shipname),identity=identityByMmsi.get(row.mmsi)||trackIdentity;
-  const name=staticRow?.decoded.shipname||identity.shipname;
-  const imo=staticRow?.decoded.imo||identity.imo;
+  const identity={...trackIdentity,...identityByMmsi.get(row.mmsi)};
+  const name=identity.shipname||trackHistory.find(r=>r.decoded?.shipname)?.decoded.shipname;
+  const imo=identity.imo||trackHistory.find(r=>r.decoded?.imo)?.decoded.imo;
   const watched=watchList.some(w=>w.mmsi&&w.mmsi===row.mmsi||w.imo&&w.imo===String(imo));
   $('trackName').textContent=name|| (row.mmsi?'MMSI '+row.mmsi:'自船 GPS');
   const fields=[['MMSI',row.mmsi||'—'],['IMO',imo||'—'],['監視対象',watched?'登録済み':'未登録'],
@@ -44,7 +44,7 @@ function renderTrackDetails(){
     ['緯度',row.latitude.toFixed(6)+'°'],['経度',row.longitude.toFixed(6)+'°'],
     ['対地針路（COG）',trackNumber(d.course??d.cog??d.true_course,'°',360)],
     ['対地速力（SOG）',trackNumber(d.speed??d.spd_over_grnd,' kn',row.mmsi?102.3:Infinity)],
-    ['船首方位',trackNumber(d.heading,'°',360,0)],['メッセージ',d.msg_type?'AIS Type '+d.msg_type:row.sentence_type]];
+    ['船首方位',trackNumber(d.heading,'°',360,0)],['メッセージ',d.msg_type!==undefined?'AIS Type '+d.msg_type+(row.ais_type_name?' / '+row.ais_type_name:''):row.sentence_type]];
   const list=$('trackFields');list.replaceChildren();
   for(const [label,value] of fields){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=String(value);list.append(dt,dd)}
   $('trackStatus').textContent=trackLoadMessage||`取得済み最新500件以内の位置情報 ${positions.length}件（下表は最新20件・受信順）`;

@@ -32,6 +32,7 @@ jobs:
       - run: npx --prefix browser-tests playwright install --with-deps chromium
       - run: node browser-tests/gis-smoke.js
       - run: node browser-tests/watch-smoke.js
+      - run: node browser-tests/ais-smoke.js
       - run: node browser-tests/data-delete-smoke.js
       - if: always()
         run: docker compose logs --tail=100

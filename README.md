@@ -76,6 +76,8 @@ TCPでは改行（CRLFまたはLF）で区切ったNMEAセンテンスを送り�
 このファイルは意図的なチェックサム不正を1件含みます。正常40件の位置センテンス、AIS Type 5の分割2行、エラー1行から構成されます。
 結果は正常41件、断片待機1件、エラー1件です。「断片待機」は受信時点の履歴であり、後で再構成が完了してもその履歴は書き換えません。
 
+AIS全Typeの確認には `samples/ais-all-types.log` をアップロードします。Type 0〜28とType 24 Part B／補助船のサンプルを含み、正常31件・断片待機1件・エラー0件になります。Type 17の基準局位置も地図に表示され、位置のない通報は受信一覧と解析詳細で確認できます。
+
 ## 3. 実装内容
 
 | 機能 | 動作 |
@@ -84,7 +86,7 @@ TCPでは改行（CRLFまたはLF）で区切ったNMEAセンテンスを送り�
 | TCP | 10111/TCP、改行区切りのセンテンス、有界読み取り、再接続元別の処理 |
 | NMEA | チェックサム検証、pynmea2による対応センテンス解析、GP/GN等のトーカ識別 |
 | 位置 | GGA/RMC/GLL等の有効位置、RMCから日付付きUTC時刻を抽出 |
-| AIS | pyaisで対応するVDM/VDOを解析。1/2/3/5/18/19/21/24等を含む。分割再構成とタイムアウト |
+| AIS | AIS Type 1〜28と旧形式Type 0を解析。pyais 3.2.3と座標・可変長バイナリの補正処理を使用。Type 6/8/25/26のバイナリ、Type 24のPart A/B／補助船、分割再構成とタイムアウトに対応 |
 | ファイル | 最大100 MB、同時2件、進捗・停止・結果保持。行単位のTXT/LOG/NMEA/CSV内のセンテンス抽出 |
 | 記録 | 元センテンス、受信・解析時刻、送信元、チェックサム結果、解析属性、位置、MMSI |
 | データベース | Docker/AWSはPostgreSQL 17。軽量テスト用にSQLiteにも対応 |
@@ -95,7 +97,9 @@ TCPでは改行（CRLFまたはLF）で区切ったNMEAセンテンスを送り�
 | 保持 | Dockerボリューム／AWS EBS、ファイルジョブ情報。中断ジョブは再起動時に明示 |
 
 未知センテンスは `unsupported` として原文・フィールドを残します。未知のメッセージまで意味解析できるという保証ではありません。
-AIVDM/AIVDO Type 6/8等のアプリケーション固有バイナリは、ライブラリが提供する範囲の属性・バイト列を保持します。
+AIVDM/AIVDOの受信行には `ais_type` と `ais_type_name` を付加し、受信一覧・航跡詳細でTypeを表示します。ITU-R M.1371-6のType 1〜28と旧形式Type 0を受信・保存します。Type 24 Part Aの船名とType 19の船名をMMSI単位の船舶情報DBへ反映し、Part B受信後も船名・既知IMOを保持します。Part Bの呼出符号・寸法・補助船の母船MMSIなどは個別イベントに保存します。
+
+Type 17の基準局座標とType 22/23の対象地域座標は符号付きの度へ統一します。Type 25/26は宛先・構造化フラグに応じた全4形式に対応し、宛先の予備ビットとType 26末尾の通信状態をアプリケーションデータから分離します。バイナリは16進文字列で保存し、Type 17/25/26には `data_bit_length` も保存します。Type 26は `radio`、`communication_state_selector`、`communication_state` を保持します。アプリケーション固有バイナリの意味解析はライブラリの既知DAC/FIDに限り、未知の応用データはバイト列として確認できます。
 
 ## 4. データ処理上のルール
 
@@ -199,8 +203,8 @@ Docker Desktop／PostgreSQL／AWSでの実行結果と区別した検証記録�
 
 ## 9. 初期版の範囲外
 
-海図・オンライン地形、KML/KMZ/CZML、履歴アニメーション、AIS静的情報の船舶マスタへの統合、国籍別統計、複数UDPポート、複数ユーザー権限、保存期間の自動管理、高可用性、10万隻規模の性能保証は次段階です。
-AIS Type 24のPart A/Bは個別イベントとして保持し、船舶マスタへの統合は未実装です。
+海図・オンライン地形、KML/KMZ/CZML、履歴アニメーション、AIS静的情報の船舶マスタへの全項目統合、国籍別統計、複数UDPポート、複数ユーザー権限、保存期間の自動管理、高可用性、10万隻規模の性能保証は次段階です。
+AIS Type 24のPart A/Bは個別イベントとして保持し、Part Aの船名はMMSI単位の船舶情報へ反映します。Type 5のIMO・船名、Type 19の船名も同じ情報へ統合します。
 再起動時にAISの未完了断片は保持しません。
 
 ## 10. 参照資料
@@ -210,6 +214,7 @@ AIS Type 24のPart A/Bは個別イベントとして保持し、船舶マスタ�
 - [AWS Network Load BalancerのUDP対応](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-listeners.html)
 - [CesiumJS](https://cesium.com/learn/cesiumjs-learn/cesiumjs-quickstart/)
 - [pyais](https://github.com/M0r13n/pyais)
+- [ITU-R M.1371-6（AIS Type 1〜28、座標・バイナリの定義）](https://www.itu.int/rec/R-REC-M.1371/en)
 - [FastAPI](https://fastapi.tiangolo.com/)
 
 NMEA0183規格そのものの全文は同梱していません。利用ライブラリの対応範囲は規格全項目の適合認証とは異なります。
