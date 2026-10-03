@@ -164,3 +164,66 @@ def test_ais_suite_api_sends_selected_scenarios_over_tcp(monkeypatch):
         assert received == [('\r\n'.join(expected) + '\r\n').encode('ascii')]
     finally:
         listener.close()
+
+
+def test_ring_motion_positions_keep_radius_spacing_and_valid_speed():
+    import math
+    from server import RingMotion, AisSuiteRequest
+    for spacing in (.2, 2, 20):
+        motion = RingMotion()
+        motion.configure(AisSuiteRequest(scenario_ids=[s.id for s in SCENARIOS],
+                         center=Waypoint(lat=35, lon=179.99), spacing_nm=spacing))
+        assert motion.interval >= len(SCENARIOS) / 60
+        assert motion.rate > 0
+        markers, frames = motion.frames_at(45)
+        decoder = Decoder()
+        for marker, frame in zip(markers, frames):
+            row = decoder.parse(frame, 'motion')
+            assert row['status'] == 'ok'
+            assert 0 < row['decoded']['speed'] <= 80
+            assert 0 <= row['decoded']['course'] < 360
+            distance, _ = navigation(35, 179.99, Waypoint.model_construct(lat=marker['lat'],lon=marker['lon']))
+            assert abs(distance - marker['ring'] * spacing) < .002
+        for ring in (1, 2, 3):
+            angles = [m['angle'] for m in markers if m['ring'] == ring]
+            gaps = [(angles[(i+1) % len(angles)] - angle) % 360 for i, angle in enumerate(angles)]
+            assert max(gaps)-min(gaps) < 1e-9
+        assert motion.frames_at(0)[0] == motion.frames_at(360)[0]
+
+
+def test_ring_motion_transmits_updates_and_stop_closes_tcp(monkeypatch):
+    import asyncio
+    import server
+    async def exercise():
+        received = []
+        closed = asyncio.Event()
+        async def handle(reader, writer):
+            try:
+                while line := await reader.readline():
+                    received.append(line.decode().strip())
+            finally:
+                writer.close()
+                await writer.wait_closed()
+                closed.set()
+        listener = await asyncio.start_server(handle, '127.0.0.1', 0)
+        monkeypatch.setattr(server, 'HOST', '127.0.0.1')
+        monkeypatch.setattr(server, 'PORT', listener.sockets[0].getsockname()[1])
+        motion = server.RingMotion()
+        motion.configure(server.AisSuiteRequest(scenario_ids=['type-1'],center=Waypoint(lat=35,lon=139)))
+        motion.active = True
+        motion.task = asyncio.create_task(motion.run())
+        try:
+            deadline = asyncio.get_running_loop().time() + 5
+            while len(received) < 2 and asyncio.get_running_loop().time() < deadline:
+                await asyncio.sleep(.05)
+            await motion.stop()
+            await asyncio.wait_for(closed.wait(), 2)
+            assert not motion.active and not motion.connected and motion.task is None
+            rows = [Decoder().parse(frame,'motion') for frame in received]
+            assert len(rows) >= 2 and all(row['status']=='ok' for row in rows)
+            assert rows[0]['latitude'] != rows[1]['latitude'] or rows[0]['longitude'] != rows[1]['longitude']
+        finally:
+            await motion.stop()
+            listener.close()
+            await listener.wait_closed()
+    asyncio.run(exercise())

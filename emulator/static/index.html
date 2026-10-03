@@ -55,6 +55,8 @@
       <label for="aisScenario">試験項目</label><select id="aisScenario" aria-label="AIS試験項目"></select>
       <div class="actions"><button type="button" id="sendScenario">選択項目を送信</button><button type="button" class="secondary" id="sendAllScenarios">全項目を送信</button></div>
       <p id="suiteCoverage" aria-live="polite">試験項目を読み込み中</p><p id="suiteResult" role="status"></p>
+      <div class="actions"><button type="button" id="startRingMotion">周回開始（自動）</button><button type="button" class="secondary" id="stopRingMotion">周回停止</button></div>
+      <p id="ringMotionStatus" role="status">周回停止中</p><p>全項目を送信後、位置通知を継続送信します。更新間隔・移動量は配置と送信処理時間から自動調整します。</p>
       <details><summary>選択項目の送信文</summary><pre id="suiteFrames"></pre></details>
       <p>送信完了はTCPへの書き込みを示します。受信・解析結果は本体のデータ画面で確認してください。</p>
     </section>

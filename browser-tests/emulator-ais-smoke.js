@@ -46,7 +46,26 @@ const fs=require('node:fs');
     assert.equal(received.filter(row=>row.status==='pending').length,3);
     for(const marker of markers){const position=received.findLast(row=>row.ais_type===1&&row.mmsi===String(marker.mmsi));
       assert(position,marker.id);assert(Math.abs(position.latitude-marker.lat)<.00001);assert(Math.abs(position.longitude-marker.lon)<.00001)}
+    await page.locator('#startRingMotion').click();
+    let motion;
+    const motionDeadline=Date.now()+15000;
+    while(Date.now()<motionDeadline){
+      motion=await (await page.request.get('http://127.0.0.1:8090/api/ais/motion')).json();
+      if(motion.active&&motion.cycles>=2)break;
+      await page.waitForTimeout(150);
+    }
+    assert(motion.active&&motion.cycles>=2);
+    assert(motion.interval>=1&&motion.angular_step_deg>0);
+    assert.notEqual(motion.markers[0].lon,markers[0].lon);
+    await page.waitForFunction(()=>suiteMarkers.length===42&&suiteMarkers[0].angle>0);
+    assert(await page.locator('#suiteLat').isDisabled());
+    const motionRows=await (await app.request.get('http://127.0.0.1:18081/api/events?limit=500&after='+before)).json();
+    assert(motionRows.some(row=>row.ais_type===1&&row.mmsi===String(markers[0].mmsi)&&row.decoded.speed>0));
+    await page.locator('#stopRingMotion').click();
+    await page.waitForFunction(()=>!document.querySelector('#suiteLat').disabled);
+    const stopped=await (await page.request.get('http://127.0.0.1:8090/api/ais/motion')).json();
+    assert(!stopped.active&&!stopped.connected);
     assert.deepEqual(errors,[]);
-    console.log('PASS: emulator UI sent all 42 AIS scenarios on three concentric rings; 29 types and positions persisted');
+    console.log('PASS: 42 AIS scenarios, three concentric rings, automatic TCP motion and stop');
   }finally{await browser.close()}
 })().catch(error=>{console.error(error);process.exit(1)});
