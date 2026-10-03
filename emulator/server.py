@@ -413,7 +413,7 @@ class RingMotion:
                 self.error = ''
                 previous = time.monotonic()
                 while self.active:
-                    await asyncio.sleep(self.interval)
+                    await asyncio.sleep(max(0, previous + self.interval - time.monotonic()))
                     started = time.monotonic()
                     phase = (self.phase + self.rate * (started - previous)) % 360
                     markers, frames = self.frames_at(phase)
