@@ -4,6 +4,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'emulator'))
 from fastapi.testclient import TestClient
 from server import Config, Route, Simulator, Waypoint, app, navigation
 from app.parser import Decoder
+from ais_suite import SCENARIOS
 
 def test_route_reaches_destination_and_emits_real_nmea():
     sim=Simulator()
@@ -85,3 +86,56 @@ def test_ais_type5_fields_are_encoded_and_validated():
     with TestClient(app) as client:
         for field,value in [('callsign','日本語'),('shipname','TOO LONG A VESSEL NAME'),('draught',1.25),('to_port',64)]:
             assert client.post('/api/start',json={'ais5':{field:value}}).status_code==422
+
+
+def test_ais_suite_covers_every_type_and_variant_with_valid_wire_frames():
+    assert {s.message_type for s in SCENARIOS} == set(range(29))
+    assert {'type-5', 'type-24-a', 'type-24-b', 'type-24-aux',
+            'type-26-multipart'} <= {s.id for s in SCENARIOS}
+    assert len([s for s in SCENARIOS if s.message_type == 25]) == 4
+    assert len([s for s in SCENARIOS if s.message_type == 26]) == 5
+    for scenario in SCENARIOS:
+        decoder = Decoder()
+        rows = [decoder.parse(frame, scenario.id) for frame in scenario.frames]
+        assert [row['status'] for row in rows[:-1]] == ['pending'] * (len(rows) - 1), scenario.id
+        assert rows[-1]['status'] == 'ok', (scenario.id, rows[-1])
+        assert rows[-1]['ais_type'] == scenario.message_type
+
+
+def test_ais_suite_api_sends_selected_scenarios_over_tcp(monkeypatch):
+    import socket
+    import threading
+    import server
+
+    listener = socket.socket()
+    listener.bind(('127.0.0.1', 0))
+    listener.listen(1)
+    listener.settimeout(5)
+    monkeypatch.setattr(server, 'HOST', '127.0.0.1')
+    monkeypatch.setattr(server, 'PORT', listener.getsockname()[1])
+    received = []
+    def accept():
+        conn, _ = listener.accept()
+        with conn:
+            chunks = []
+            while data := conn.recv(65536):
+                chunks.append(data)
+            received.append(b''.join(chunks))
+    thread = threading.Thread(target=accept)
+    thread.start()
+    try:
+        with TestClient(app) as client:
+            catalog = client.get('/api/ais/scenarios').json()
+            assert catalog['types'] == list(range(29))
+            assert client.post('/api/ais/send', json={'scenario_ids':['missing']}).status_code == 422
+            assert client.post('/api/ais/send', json={'scenario_ids':['type-5','type-5']}).status_code == 422
+            result = client.post('/api/ais/send', json={'scenario_ids':['type-5','type-26-multipart']})
+            assert result.status_code == 200, result.text
+            assert result.json()['sentences'] == 5
+        thread.join(timeout=5)
+        assert not thread.is_alive()
+        expected = [frame for id in ('type-5','type-26-multipart')
+                    for frame in next(s.frames for s in SCENARIOS if s.id == id)]
+        assert received == [('\r\n'.join(expected) + '\r\n').encode('ascii')]
+    finally:
+        listener.close()
