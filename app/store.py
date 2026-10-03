@@ -45,13 +45,15 @@ class Store:
                 row['id'] = result.inserted_primary_key[0]
                 if row.get('status')!='ok' or row.get('sentence_type') not in ('VDM','VDO') or not row.get('mmsi'): continue
                 mmsi=row['mmsi']; data=row.get('decoded') or {}
-                imo=str(data.get('imo') or '')
-                if data.get('msg_type')==5:
-                    shipname=str(data.get('shipname') or '').strip(' @')
+                previous=known.get(mmsi,{})
+                imo=str(data.get('imo') or previous.get('imo') or '')
+                msg_type=data.get('msg_type')
+                if msg_type in (5,19,24):
+                    shipname=str(data.get('shipname') or data.get('name') or '').strip(' @') or previous.get('shipname')
+                    identity={'mmsi':mmsi,'imo':imo or None,'shipname':shipname or None}
                     c.execute(self.identities.delete().where(self.identities.c.mmsi==mmsi))
-                    c.execute(self.identities.insert().values(mmsi=mmsi,imo=imo or None,shipname=shipname))
-                    known[mmsi]={'mmsi':mmsi,'imo':imo or None,'shipname':shipname}
-                else: imo=known.get(mmsi,{}).get('imo') or ''
+                    c.execute(self.identities.insert().values(**identity))
+                    known[mmsi]=identity
                 for target in watched:
                     by_mmsi=target['mmsi']==mmsi if target['mmsi'] else False
                     by_imo=target['imo']==imo if target['imo'] and imo else False
