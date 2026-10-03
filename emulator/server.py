@@ -258,7 +258,10 @@ async def set_course(course:Course):
     return sim.status()
 @app.post('/api/stop')
 async def stop():
-    await sim.stop();return sim.status()
+    async with ring_motion.lock:
+        await ring_motion.stop()
+        await sim.stop()
+        return {**sim.status(), 'motion': ring_motion.status()}
 
 class AisSuiteRequest(BaseModel):
     scenario_ids: list[str] = Field(min_length=1, max_length=50)
@@ -454,11 +457,12 @@ async def motion_start(request: AisSuiteRequest):
         raise HTTPException(422, '中心位置を指定してください')
     async with ring_motion.lock:
         await ring_motion.stop()
-        await send_ais_scenarios(request)
+        initial = await send_ais_scenarios(request)
         ring_motion.configure(request)
         ring_motion.active = True
         ring_motion.task = asyncio.create_task(ring_motion.run())
-        return ring_motion.status()
+        return {**ring_motion.status(), 'sent': initial['sent'],
+                'sentences': initial['sentences'], 'target': initial['target']}
 
 @app.post('/api/ais/motion/stop')
 async def motion_stop():
