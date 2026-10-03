@@ -24,11 +24,13 @@ function applyMotion(state){
 function ringRequest(){const center=suiteCenter(),spacing=Number(e('suiteSpacing').value);
   if(!Number.isFinite(center.lat)||Math.abs(center.lat)>89||!Number.isFinite(center.lon)||Math.abs(center.lon)>180||!Number.isFinite(spacing)||spacing<.2||spacing>20)throw Error('中心座標または間隔を確認してください');
   return {scenario_ids:aisScenarios.map(item=>item.id),center,spacing_nm:spacing}}
-e('startRingMotion').onclick=async()=>{if(!aisScenarios.length)return;e('startRingMotion').disabled=true;
-  try{const request=ringRequest();applyMotion(await api('/api/ais/motion/start',request));if(current)renderMap(current);
+async function startAllScenarios(){if(!aisScenarios.length)return;e('sendAllScenarios').disabled=true;
+  try{const request=ringRequest(),state=await api('/api/ais/motion/start',request);applyMotion(state);if(current)renderMap(current);
+    e('suiteResult').textContent=`全Type送信開始: ${state.sent}項目 / ${state.sentences}文 → ${state.target}（自動周回・位置更新を継続中）`;
     viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(request.center.lon,request.center.lat,Math.max(50000,request.spacing_nm*1852*28))})}
-  catch(err){e('suiteResult').textContent=err.message}finally{e('startRingMotion').disabled=false}};
-e('stopRingMotion').onclick=async()=>{try{const state=await api('/api/ais/motion/stop',{});suiteMarkers=state.markers;applyMotion(state);if(current)renderMap(current)}catch(err){e('suiteResult').textContent=err.message}};
+  catch(err){e('suiteResult').textContent=err.message;e('sendAllScenarios').disabled=false}}
+async function stopAllSending(){const status=await api('/api/stop',{});suiteMarkers=status.motion.markers;applyMotion(status.motion);updateStatus(status);e('suiteResult').textContent='送信停止しました'}
+e('stopRingMotion').onclick=async()=>{try{await stopAllSending()}catch(err){e('suiteResult').textContent=err.message}};
 function suiteCenter(){return {lat:Number(e('suiteLat').value),lon:Number(e('suiteLon').value)}}
 function setSuiteCenter(point){e('suiteLat').value=point.lat;e('suiteLon').value=point.lon;suiteMarkers=[];if(current)renderMap(current)}
 function selectedAisScenario(){return aisScenarios.find(item=>item.id===e('aisScenario').value)}
@@ -37,17 +39,13 @@ async function loadAisScenarios(){try{const data=await api('/api/ais/scenarios')
   const select=e('aisScenario');select.replaceChildren();for(const item of aisScenarios){const option=document.createElement('option');option.value=item.id;option.textContent=item.label+' · '+item.sentences+'文';select.append(option)}
   e('suiteCoverage').textContent=`${data.types.length} Type / ${aisScenarios.length}項目（分割・形式別を含む）`;showAisScenario()
 }catch(err){e('suiteResult').textContent=err.message}}
-async function sendAisScenarios(ids,arrange=false){const buttons=[e('sendScenario'),e('sendAllScenarios')];buttons.forEach(button=>button.disabled=true);
-  try{const request={scenario_ids:ids};if(arrange){const center=suiteCenter(),spacing=Number(e('suiteSpacing').value);
-      if(!Number.isFinite(center.lat)||Math.abs(center.lat)>89||!Number.isFinite(center.lon)||Math.abs(center.lon)>180||!Number.isFinite(spacing)||spacing<.2||spacing>20)throw Error('中心座標または間隔を確認してください');
-      request.center=center;request.spacing_nm=spacing}
-    const result=await api('/api/ais/send',request);if(arrange){suiteMarkers=result.markers;renderMap(current);
-      viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(request.center.lon,request.center.lat,Math.max(50000,request.spacing_nm*1852*28))})}
+async function sendAisScenarios(ids){const buttons=[e('sendScenario')];buttons.forEach(button=>button.disabled=true);
+  try{const result=await api('/api/ais/send',{scenario_ids:ids});
     e('suiteResult').textContent=`TCP送信完了: ${result.sent}項目 / ${result.sentences}文 → ${result.target}`;refresh()}
   catch(err){e('suiteResult').textContent=`送信失敗: ${err.message}`}finally{buttons.forEach(button=>button.disabled=false)}}
 e('aisScenario').onchange=showAisScenario;
 e('sendScenario').onclick=()=>{if(selectedAisScenario())sendAisScenarios([e('aisScenario').value])};
-e('sendAllScenarios').onclick=()=>{if(aisScenarios.length)sendAisScenarios(aisScenarios.map(item=>item.id),true)};
+e('sendAllScenarios').onclick=startAllScenarios;
 for(const key of ['suiteLat','suiteLon','suiteSpacing'])e(key).addEventListener('change',()=>{suiteMarkers=[];if(current)renderMap(current)});
 for(const key of ais5Text)e('ais5_'+key).addEventListener('input',event=>{event.target.value=event.target.value.toUpperCase()});
 function activateTab(type){for(const name of types){const selected=name===type,tab=e('tab-'+name);tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;e('panel-'+name).hidden=!selected}}
@@ -173,5 +171,5 @@ e('config').onsubmit=async event=>{event.preventDefault();const data={};for(cons
   for(const key of Object.values(inputForType))data[key]=e(key).checked;
   data.mmsi_start=Number(e('mmsi_start').value);data.ais5={};for(const key of ais5Fields){const value=e('ais5_'+key).value;data.ais5[key]=ais5Text.includes(key)?value:key==='dte'?value==='true':Number(value)}
   data.gps=true;data.ais=true;data.route={waypoints:route,loop:e('loop').checked};busy=true;try{updateStatus(await api('/api/start',data))}catch(err){error(err)}finally{busy=false}};
-e('stop').onclick=async()=>{busy=true;try{updateStatus(await api('/api/stop',{}))}catch(err){error(err)}finally{busy=false}};
+e('stop').onclick=async()=>{busy=true;try{await stopAllSending()}catch(err){error(err)}finally{busy=false}};
 initMap();refresh();loadAisScenarios();setInterval(refresh,1000);

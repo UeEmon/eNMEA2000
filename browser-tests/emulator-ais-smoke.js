@@ -26,10 +26,14 @@ const fs=require('node:fs');
     await page.locator('#suiteLat').fill('34.5');
     await page.locator('#suiteLon').fill('135.5');
     await page.locator('#suiteSpacing').fill('2');
-    await page.locator('#sendAllScenarios').click();
+    const [startedResponse]=await Promise.all([
+      page.waitForResponse(response=>response.url().endsWith('/api/ais/motion/start')&&response.request().method()==='POST'),
+      page.locator('#sendAllScenarios').click()
+    ]);
+    assert(startedResponse.ok());const initial=await startedResponse.json();assert(initial.active);
     await page.waitForFunction(()=>document.querySelector('#suiteResult').textContent.includes('42項目 / 87文'),null,{timeout:15000});
     assert.equal(await page.evaluate(()=>viewer.entities.values.filter(item=>item.id.startsWith('sim-suite-type-')).length),42);
-    const markers=await page.evaluate(()=>suiteMarkers);
+    const markers=initial.markers;
     assert.deepEqual([1,2,3].map(ring=>markers.filter(item=>item.ring===ring).length),[7,14,21]);
     const deadline=Date.now()+20000;
     let received=[];
@@ -46,7 +50,6 @@ const fs=require('node:fs');
     assert.equal(received.filter(row=>row.status==='pending').length,3);
     for(const marker of markers){const position=received.findLast(row=>row.ais_type===1&&row.mmsi===String(marker.mmsi));
       assert(position,marker.id);assert(Math.abs(position.latitude-marker.lat)<.00001);assert(Math.abs(position.longitude-marker.lon)<.00001)}
-    await page.locator('#startRingMotion').click();
     let motion;
     const motionDeadline=Date.now()+15000;
     while(Date.now()<motionDeadline){
@@ -65,6 +68,13 @@ const fs=require('node:fs');
     await page.waitForFunction(()=>!document.querySelector('#suiteLat').disabled);
     const stopped=await (await page.request.get('http://127.0.0.1:8090/api/ais/motion')).json();
     assert(!stopped.active&&!stopped.connected);
+    const stoppedSender=await (await page.request.get('http://127.0.0.1:8090/api/status')).json();
+    assert(!stoppedSender.active&&!stoppedSender.connected);
+    await page.waitForTimeout(1300);
+    const afterStop=await (await page.request.get('http://127.0.0.1:8090/api/ais/motion')).json();
+    assert.equal(afterStop.cycles,stopped.cycles);
+    const afterSender=await (await page.request.get('http://127.0.0.1:8090/api/status')).json();
+    assert.equal(afterSender.lines,stoppedSender.lines);
     assert.deepEqual(errors,[]);
     console.log('PASS: 42 AIS scenarios, three concentric rings, automatic TCP motion and stop');
   }finally{await browser.close()}
