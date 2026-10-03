@@ -32,13 +32,15 @@ const dgram=require('node:dgram');
       assert(good.some(row=>row.decoded.mothership_mmsi===431888777));
     }
     async function checkSource(source){
+      assert.equal(typeof source,'string');
       await page.waitForFunction(async source=>{
         const rows=await fetch('/api/events?limit=100&source='+encodeURIComponent(source)).then(r=>r.json());
         return rows.length===32;
       },source,{timeout:15000});
-      const response=await page.request.get('/api/events',{params:{source,limit:100}});
+      const query=new URLSearchParams({source,limit:'100'});
+      const response=await page.request.get('/api/events?'+query);
       assert(response.ok());const rows=await response.json();validate(rows);
-      const exported=await page.request.get('/api/export/jsonl',{params:{source}});
+      const exported=await page.request.get('/api/export/jsonl?'+new URLSearchParams({source}));
       assert(exported.ok());validate((await exported.text()).trim().split('\n').map(line=>JSON.parse(line)));
       return rows;
     }
