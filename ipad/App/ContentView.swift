@@ -58,7 +58,16 @@ struct ContentView: View {
  }
  private var mapPage: some View {
   HStack(spacing:0) {
-   if model.mapURL != nil { MapView(model:model) } else { ContentUnavailableView("GISを準備中",systemImage:"map") }
+   if model.mapURL != nil { MapView(model:model).overlay(alignment:.topLeading) {
+    VStack(alignment:.leading,spacing:8) {
+     Toggle("自己位置中心",isOn:$model.followOwn).toggleStyle(.switch)
+      .onChange(of:model.followOwn) { _,v in UserDefaults.standard.set(v,forKey:"followOwn") }
+     if let own = model.ownState.position {
+      Text(String(format:"自己位置 %.5f°, %.5f°",own.lat,own.lon)).font(.caption.monospaced())
+      Text("\(own.kind) / 最終測位 \(own.time.formatted(date:.omitted,time:.standard))").font(.caption2)
+     } else { Text("自己位置の受信待ち").font(.caption) }
+    }.padding(10).frame(width:265).background(.regularMaterial,in:RoundedRectangle(cornerRadius:10)).padding(12)
+   } } else { ContentUnavailableView("GISを準備中",systemImage:"map") }
    if let track = model.selectedTrack {
     Divider()
     ScrollView {
@@ -66,6 +75,10 @@ struct ContentView: View {
       HStack { Text(track.fields["shipname"] ?? "船舶詳細").font(.headline); Spacer(); Button { model.selected = nil } label: { Image(systemName:"xmark.circle") } }
       Text("MMSI \(track.mmsi)").font(.system(.body,design:.monospaced))
       Text(String(format:"緯度 %.6f / 経度 %.6f",track.lat,track.lon)).font(.caption)
+      if let relative = model.selectedBearingDistance {
+       LabeledContent("自己位置からの方位（真方位）",value:relative.bearingText)
+       LabeledContent("自己位置からの距離",value:String(format:"%.2f NM",relative.distanceNM))
+      } else { Text("自己位置未受信：方位・距離を計算できません").font(.caption).foregroundStyle(.secondary) }
       Button("監視対象に登録",systemImage:"binoculars") { model.register(track.mmsi) }.buttonStyle(.bordered)
       ForEach(track.fields.keys.sorted(),id:\.self) { k in VStack(alignment:.leading) { Text(k).font(.caption).foregroundStyle(.secondary); Text(track.fields[k] ?? "").textSelection(.enabled) } }
       Divider(); Text("航跡（最大100受信分）").font(.headline)
@@ -122,6 +135,11 @@ struct ContentView: View {
    Section("GISシンボル") {
     Picker("シンボル規格",selection:$model.standard) { Text("MIL-STD-2525D").tag("2525"); Text("APP-6D").tag("APP6") }
      .onChange(of:model.standard) { _,v in UserDefaults.standard.set(v,forKey:"symbolStandard") }
+    Picker("自己位置シンボル",selection:$model.ownPlatform) { Text("船舶").tag("ship"); Text("航空機").tag("aircraft") }
+     .onChange(of:model.ownPlatform) { _,v in UserDefaults.standard.set(v,forKey:"ownPlatform") }
+    Toggle("自己位置をGIS中心に保持",isOn:$model.followOwn)
+     .onChange(of:model.followOwn) { _,v in UserDefaults.standard.set(v,forKey:"followOwn") }
+    Text("有効なAIVDOまたはGPS（RMC/GGA/GLL）を自己位置として使用します。最後に受信した有効な測位を表示します。方位は真北000°から時計回り、距離はNMです。中心保持中は目標を選択しても自己位置を中心に保ちます。").font(.caption)
     Text("背景地図：Natural Earth II（オフライン）").font(.caption)
    }
    Section("運用") {
