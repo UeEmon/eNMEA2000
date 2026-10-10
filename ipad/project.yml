@@ -40,6 +40,9 @@ targets:
         CODE_SIGN_STYLE: Automatic
     dependencies:
       - package: NMEACore
+        product: NMEACore
+      - package: NMEACore
+        product: NMEATransport
 schemes:
   eNMEA-iPad:
     build:

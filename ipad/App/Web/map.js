@@ -36,8 +36,18 @@ window.renderTracks = (items, options) => {
 window.focusMmsi = mmsi => { const t=tracks.find(t=>t.mmsi===mmsi); if(t) { viewer.selectedEntity=viewer.entities.getById(mmsi); viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(t.lon,t.lat,45000),duration:0.6}); } };
 function picked(position) { const p=viewer.scene.pick(position); const id=p?.id?.id; return typeof id==='string' && !id.startsWith('trail:') ? id : null; }
 viewer.screenSpaceEventHandler.setInputAction(e=>{const mmsi=picked(e.position); if(mmsi) send({action:'select',mmsi});},Cesium.ScreenSpaceEventType.LEFT_CLICK);
-viewer.screenSpaceEventHandler.setInputAction(e=>{const mmsi=picked(e.position); if(mmsi) send({action:'watch',mmsi});},Cesium.ScreenSpaceEventType.RIGHT_CLICK);
-let press;
+const menu=document.getElementById('quickMenu');
+let menuMmsi;
+function showMenu(mmsi,point) {
+ menuMmsi=mmsi; document.getElementById('menuTitle').textContent=tracks.find(t=>t.mmsi===mmsi)?.fields.shipname||mmsi;
+ menu.hidden=false; menu.style.left=Math.min(point.x,window.innerWidth-200)+'px'; menu.style.top=Math.min(point.y,window.innerHeight-155)+'px';
+}
+for(const [id,action] of [['menuSelect','select'],['menuWatch','watch']]) document.getElementById(id).addEventListener('click',()=>{send({action,mmsi:menuMmsi});menu.hidden=true;});
+document.addEventListener('pointerdown',e=>{if(!menu.contains(e.target))menu.hidden=true;});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')menu.hidden=true;});
+viewer.screenSpaceEventHandler.setInputAction(e=>{const mmsi=picked(e.position); if(mmsi) showMenu(mmsi,e.position);},Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+let press,pressStart;
 const canvas=viewer.scene.canvas;
-canvas.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;const rect=canvas.getBoundingClientRect();const point=new Cesium.Cartesian2(e.clientX-rect.left,e.clientY-rect.top);const mmsi=picked(point); if(mmsi) press=setTimeout(()=>send({action:'watch',mmsi}),650);});
-for(const event of ['pointerup','pointercancel','pointermove']) canvas.addEventListener(event,()=>clearTimeout(press));
+canvas.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;const rect=canvas.getBoundingClientRect();const point=new Cesium.Cartesian2(e.clientX-rect.left,e.clientY-rect.top);const mmsi=picked(point); pressStart=point; if(mmsi) press=setTimeout(()=>showMenu(mmsi,point),650);});
+for(const event of ['pointerup','pointercancel']) canvas.addEventListener(event,()=>clearTimeout(press));
+canvas.addEventListener('pointermove',e=>{const rect=canvas.getBoundingClientRect();if(pressStart&&Math.hypot(e.clientX-rect.left-pressStart.x,e.clientY-rect.top-pressStart.y)>10)clearTimeout(press);});

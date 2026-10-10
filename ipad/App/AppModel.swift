@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import NMEACore
+import NMEATransport
 @MainActor final class AppModel: ObservableObject {
  @Published var tracks: [Track] = []
  @Published var events: [Event] = []
@@ -55,11 +56,11 @@ import NMEACore
   Task { try? await Task.sleep(for:.milliseconds(500)); scheduled = false; refresh() }
  }
  func refresh() {
-  let store = store
+  let store = store, selected = selected
   queue.async { [weak self] in
    do {
     guard let store else { return }
-    let t = try store.tracks(), e = try store.recentEvents(), w = try store.watches(), a = try store.alerts()
+    let t = try store.tracks(trailFor:selected), e = try store.recentEvents(), w = try store.watches(), a = try store.alerts()
     Task { @MainActor in self?.tracks = t; self?.events = e; self?.watches = w; self?.alerts = a }
    } catch { Task { @MainActor in self?.error = error.localizedDescription } }
   }
@@ -73,7 +74,7 @@ import NMEACore
   queue.async { [weak self] in do { parser?.reset(); try receiver?.start(udp:udp,tcp:tcp) } catch { Task { @MainActor in self?.running = false; self?.error = error.localizedDescription } } }
  }
  func stop() { let receiver = receiver; queue.async { receiver?.stop() }; running = false; status = "停止中" }
- func select(_ mmsi: String) { selected = mmsi; focusRequest += 1 }
+ func select(_ mmsi: String) { selected = mmsi; focusRequest += 1; refresh() }
  func register(_ mmsi: String) {
   var w = Watch(); w.mmsi = mmsi
   if let track = tracks.first(where: { $0.mmsi == mmsi }) { w.name = track.fields["shipname"] ?? ""; if let imo = track.fields["imo"], imo != "0" { w.imo = imo } }

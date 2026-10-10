@@ -89,13 +89,13 @@ public final class NMEAStore {
  }
  public func deleteWatch(_ id: String) throws { try run("DELETE FROM watches WHERE id=?",[id]) }
  public func alerts() throws -> [WatchAlert] { try rows("SELECT payload FROM alerts ORDER BY time DESC LIMIT 500").map { try decode($0[0],as:WatchAlert.self) } }
- public func tracks() throws -> [Track] {
+ public func tracks(trailFor selected: String? = nil) throws -> [Track] {
   let identities = try rows("SELECT mmsi,payload FROM identities").reduce(into:[String:[String:String]]()) { result,row in result[row[0]] = try decode(row[1],as:[String:String].self) }
   let list = try watches()
   return try rows("SELECT mmsi,payload FROM positions").map { row in
    let e = try decode(row[1],as:Event.self), mmsi = row[0]
    var fields = e.fields; fields.merge(identities[mmsi] ?? [:],uniquingKeysWith: { _,new in new })
-   let trail = try recentEvents(limit:100,mmsi:mmsi).reversed().compactMap { e -> [Double]? in guard let lat = e.latitude, let lon = e.longitude else { return nil }; return [lon,lat] }
+   let trail = try (mmsi == selected ? recentEvents(limit:100,mmsi:mmsi) : []).reversed().compactMap { e -> [Double]? in guard let lat = e.latitude, let lon = e.longitude else { return nil }; return [lon,lat] }
    return Track(mmsi:mmsi,lat:e.latitude!,lon:e.longitude!,fields:fields,watched:list.contains { $0.mmsi == mmsi || (!$0.imo.isEmpty && $0.imo == fields["imo"]) },trail:trail)
   }
  }

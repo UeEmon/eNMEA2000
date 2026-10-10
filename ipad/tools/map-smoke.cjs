@@ -19,6 +19,7 @@ const {chromium}=require('../../browser-tests/node_modules/playwright');
   }
   const point=await page.evaluate(()=>{const e=viewer.entities.getById('123456789'),p=Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,e.position.getValue(viewer.clock.currentTime));return {x:p.x,y:p.y};});
   await page.mouse.click(point.x,point.y,{button:'right'});
+  await page.getByRole('menuitem',{name:'監視対象に登録'}).click();
   await page.waitForFunction(()=>window.messages.some(m=>m.action==='watch'&&m.mmsi==='123456789'));
   await page.screenshot({path:'/tmp/enmea-ipad-map.png'});
   if(errors.length||external.length)throw Error(JSON.stringify({errors,external}));

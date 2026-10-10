@@ -1,13 +1,13 @@
 import Foundation
 import Network
 /// Read-only bundle server. Loopback binding enables Cesium workers without an internet service.
-final class AssetServer {
+public final class AssetServer {
  private let queue = DispatchQueue(label:"nmea.assets")
  private var listener: NWListener?
  private var connections: [UUID:NWConnection] = [:]
  private let root: URL
- init(root: URL) { self.root = root.resolvingSymlinksInPath() }
- func start(completion: @escaping (Result<URL,Error>) -> Void) {
+ public init(root: URL) { self.root = root.resolvingSymlinksInPath() }
+ public func start(completion: @escaping (Result<URL,Error>) -> Void) {
   do {
    let parameters = NWParameters.tcp
    parameters.requiredLocalEndpoint = .hostPort(host:"127.0.0.1",port:.any)

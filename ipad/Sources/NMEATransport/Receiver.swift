@@ -1,14 +1,14 @@
 import Foundation
 import Network
 import NMEACore
-final class Receiver {
+public final class Receiver {
  private let queue: DispatchQueue
  private var listeners: [NWListener] = []
  private var connections: [UUID:NWConnection] = [:]
- var onLines: (([String],String) -> Void)?
- var onState: ((String) -> Void)?
- init(queue: DispatchQueue) { self.queue = queue }
- func start(udp: UInt16,tcp: UInt16) throws {
+ public var onLines: (([String],String) -> Void)?
+ public var onState: ((String) -> Void)?
+ public init(queue: DispatchQueue) { self.queue = queue }
+ public func start(udp: UInt16,tcp: UInt16) throws {
   stop()
   do {
    for (name,number,params) in [("UDP",udp,NWParameters.udp),("TCP",tcp,NWParameters.tcp)] {
@@ -24,7 +24,7 @@ final class Receiver {
    }
   } catch { stop(); throw error }
  }
- func stop() { listeners.forEach { $0.cancel() }; listeners.removeAll(); connections.values.forEach { $0.cancel() }; connections.removeAll() }
+ public func stop() { listeners.forEach { $0.cancel() }; listeners.removeAll(); connections.values.forEach { $0.cancel() }; connections.removeAll() }
  private func accept(_ connection: NWConnection,udp: Bool) {
   guard connections.count < 128 else { connection.cancel(); return }
   let id = UUID(); connections[id] = connection
