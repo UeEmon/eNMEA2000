@@ -32,6 +32,7 @@ public struct AISDecoder {
   let type = unsigned(0,6)
   guard (0...28).contains(type) else { throw NMEAError.invalid("Unsupported AIS type \(type)") }
   if type == 25 || type == 26 {
+   guard bits.count >= 40 else { throw NMEAError.invalid("AIS binary header truncated") }
    let addressed = unsigned(38,1) == 1, structured = unsigned(39,1) == 1
    let trailer = type == 26 ? 24 : 0
    var cursor = 40

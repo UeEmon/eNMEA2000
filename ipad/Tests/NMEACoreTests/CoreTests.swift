@@ -59,6 +59,7 @@ final class CoreTests: XCTestCase {
    if structured { XCTAssertEqual(d["dac"],"1"); XCTAssertEqual(d["fid"],"1") }
    if type == 26 { XCTAssertEqual(d["radio"],String(0xabcde)) }
   } } }
+  for type in [25,26] { for count in [38,39] { var short = [Int](repeating:0,count:count); put(&short,0,6,type); let (p,f)=payload(short); XCTAssertThrowsError(try decoder.decode(payload:p,fill:f)) } }
   var bits = [Int](repeating:0,count:40); put(&bits,0,6,26)
   let (p,f) = payload(bits); XCTAssertThrowsError(try decoder.decode(payload:p,fill:f))
  }
