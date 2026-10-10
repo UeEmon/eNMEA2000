@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 import NMEACore
 private enum Page: String, CaseIterable, Identifiable {
@@ -96,10 +97,27 @@ struct ContentView: View {
  }
  private var settingsPage: some View {
   Form {
+   Section("このiPadのIPアドレス") {
+    if model.localAddresses.isEmpty {
+     Text(model.addressError ?? "LANのIPアドレスがありません。Wi-Fiまたは有線LANに接続してください。").foregroundStyle(.secondary)
+    }
+    ForEach(model.localAddresses) { address in
+     VStack(alignment:.leading,spacing:6) {
+      Text("\(address.label)・\(address.family)").font(.caption).foregroundStyle(.secondary)
+      HStack {
+       Text(address.address).font(.system(.body,design:.monospaced)).textSelection(.enabled)
+       Spacer()
+       Button { UIPasteboard.general.string = address.address } label: { Label("コピー",systemImage:"doc.on.doc") }.buttonStyle(.borderless)
+      }
+     }
+    }
+    Button("IPアドレスを更新",systemImage:"arrow.clockwise") { model.refreshAddresses() }
+    Text("送信機・エミュレータの送信先に、このIPアドレスと下のポート番号を指定してください。IPv4を優先して表示します。").font(.caption)
+   }
    Section("受信設定") {
     LabeledContent("UDPポート") { TextField("10110",text:$model.udpPort).keyboardType(.numberPad).frame(width:100) }
     LabeledContent("TCPポート") { TextField("10111",text:$model.tcpPort).keyboardType(.numberPad).frame(width:100) }
-    Text("同じLANからiPadのIPアドレスへユニキャストで送信してください。TCPは改行区切りです。設定変更後は受信を再開始します。").font(.caption)
+    Text("同じLANから上に表示されたiPadのIPアドレスへユニキャストで送信してください。TCPは改行区切りです。設定変更後は受信を再開始します。").font(.caption)
    }
    Section("GISシンボル") {
     Picker("シンボル規格",selection:$model.standard) { Text("MIL-STD-2525D").tag("2525"); Text("APP-6D").tag("APP6") }
@@ -112,7 +130,7 @@ struct ContentView: View {
     Text("保存先：このiPadのアプリ領域。アプリ削除でデータも消えるため、必要なログは書き出してください。")
    }
    Section("ライセンス") { Text("CesiumJS: Apache-2.0 / milsymbol: MIT / AIS schema: pyais MIT / Natural Earth: Public domain").font(.caption) }
-  }
+  }.onAppear { model.refreshAddresses() }
  }
 }
 private struct WatchEditor: View {
