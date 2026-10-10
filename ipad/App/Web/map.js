@@ -3,7 +3,7 @@ window.CESIUM_BASE_URL = 'cesium/';
 function send(body) { window.webkit?.messageHandlers.nmea.postMessage(body); }
 window.addEventListener('error', e => send({error: 'GIS: '+e.message}));
 const viewer = new Cesium.Viewer('map', {
- baseLayer: new Cesium.ImageryLayer(new Cesium.TileMapServiceImageryProvider({url:'cesium/Assets/Textures/NaturalEarthII'})),
+ baseLayer: Cesium.ImageryLayer.fromProviderAsync(Cesium.TileMapServiceImageryProvider.fromUrl('cesium/Assets/Textures/NaturalEarthII', {credit:'Natural Earth (public domain)'})),
  terrainProvider:new Cesium.EllipsoidTerrainProvider(), animation:false,timeline:false,baseLayerPicker:false,geocoder:false,
  homeButton:true,sceneModePicker:true,navigationHelpButton:false,fullscreenButton:false,infoBox:false,selectionIndicator:true,
  requestRenderMode:true,maximumRenderTimeChange:Infinity

@@ -21,6 +21,16 @@ jobs:
         run: swift test --package-path ipad
       - name: Prepare offline map assets
         run: bash ipad/tools/prepare-assets.sh
+      - name: Offline GIS browser test
+        run: |
+          npm ci --prefix browser-tests --ignore-scripts
+          cd browser-tests
+          npx playwright install chromium
+          cd ..
+          python3 -m http.server 18082 --bind 127.0.0.1 --directory ipad/App/Web > /tmp/ipad-map-http.log 2>&1 &
+          map_pid=$!
+          trap 'kill "$map_pid"' EXIT
+          node ipad/tools/map-smoke.cjs
       - name: Generate Xcode project
         run: |
           brew install xcodegen
