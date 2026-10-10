@@ -4,6 +4,7 @@ const fs=require('node:fs');
 (async()=>{
   const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
   const page=await browser.newPage();
+  let receiverWasEnabled=null;
   try{
     await page.goto('http://127.0.0.1:8090');
     await page.waitForFunction(()=>document.querySelector('#outputHost').value.length>0);
@@ -14,6 +15,8 @@ const fs=require('node:fs');
     await page.waitForFunction(()=>document.querySelector('#outputResult').textContent.includes('UDP host.docker.internal:10110'));
     const token=fs.readFileSync('.env','utf8').match(/^APP_TOKEN=(.+)$/m)[1];
     assert((await page.request.post('http://127.0.0.1:18081/api/login',{data:{token}})).ok());
+    receiverWasEnabled=(await (await page.request.get('http://127.0.0.1:18081/api/stats')).json()).udp_enabled;
+    assert((await page.request.post('http://127.0.0.1:18081/api/udp/start')).ok());
     const events=async()=>await (await page.request.get('http://127.0.0.1:18081/api/events?limit=100')).json();
     const before=(await events())[0]?.id||0;
     await page.locator('#aisScenario').selectOption('type-5');
@@ -30,6 +33,7 @@ const fs=require('node:fs');
     console.log('PASS: destination UI, TCP/UDP port defaults, UDP AIS send, saved configuration reload');
   }finally{
     await page.request.post('http://127.0.0.1:8090/api/output',{data:{host:'host.docker.internal',port:10111,protocol:'tcp'}});
+    if(receiverWasEnabled!==null)await page.request.post('http://127.0.0.1:18081/api/udp/'+(receiverWasEnabled?'start':'stop'));
     await browser.close();
   }
 })().catch(error=>{console.error(error);process.exit(1)});
