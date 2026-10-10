@@ -11,6 +11,7 @@ public final class NMEAStore {
    try run("PRAGMA journal_mode=WAL"); try run("PRAGMA foreign_keys=ON")
    try run("CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY, time REAL NOT NULL, mmsi TEXT, payload TEXT NOT NULL)")
    try run("CREATE INDEX IF NOT EXISTS events_track ON events(mmsi,time DESC)")
+   try run("CREATE TABLE IF NOT EXISTS own_state(id INTEGER PRIMARY KEY CHECK(id=1),payload TEXT NOT NULL)")
    try run("CREATE TABLE IF NOT EXISTS identities(mmsi TEXT PRIMARY KEY,payload TEXT NOT NULL)")
    try run("CREATE TABLE IF NOT EXISTS positions(mmsi TEXT PRIMARY KEY,payload TEXT NOT NULL)")
    try run("CREATE TABLE IF NOT EXISTS watches(id TEXT PRIMARY KEY,mmsi TEXT,imo TEXT,payload TEXT NOT NULL)")
@@ -50,9 +51,11 @@ public final class NMEAStore {
  public func insert(_ events: [Event], alerting: Bool = true) throws {
   try transaction {
    let watchList = try watches()
+   var own = try ownState()
    for e in events {
     try run("INSERT INTO events VALUES(?,?,?,?)",[e.id,String(e.time.timeIntervalSince1970),e.mmsi ?? "",try json(e)])
-    guard e.status == "ok", let mmsi = e.mmsi else { continue }
+    own.consume(e)
+    guard e.kind != "VDO", e.status == "ok", let mmsi = e.mmsi else { continue }
     var identity: [String:String] = [:]
     if let row = try rows("SELECT payload FROM identities WHERE mmsi=?",[mmsi]).first { identity = try decode(row[0],as:[String:String].self) }
     for (k,v) in e.fields where !v.isEmpty && (k == "shipname" || k == "callsign" || k == "imo" || k == "ship_type") {
@@ -71,7 +74,12 @@ public final class NMEAStore {
      }
     }
    }
+   try run("INSERT OR REPLACE INTO own_state VALUES(1,?)",[try json(own)])
   }
+ }
+ public func ownState() throws -> OwnState {
+  guard let row = try rows("SELECT payload FROM own_state WHERE id=1").first else { return OwnState() }
+  return try decode(row[0],as:OwnState.self)
  }
  public func recentEvents(limit: Int = 500, mmsi: String? = nil) throws -> [Event] {
   let rows = try mmsi.map { try self.rows("SELECT payload FROM events WHERE mmsi=? ORDER BY time DESC LIMIT ?",[$0,String(max(1,min(limit,1000)))]) } ?? self.rows("SELECT payload FROM events ORDER BY time DESC LIMIT ?",[String(max(1,min(limit,1000)))])
@@ -91,16 +99,16 @@ public final class NMEAStore {
  public func alerts() throws -> [WatchAlert] { try rows("SELECT payload FROM alerts ORDER BY time DESC LIMIT 500").map { try decode($0[0],as:WatchAlert.self) } }
  public func tracks(trailFor selected: String? = nil) throws -> [Track] {
   let identities = try rows("SELECT mmsi,payload FROM identities").reduce(into:[String:[String:String]]()) { result,row in result[row[0]] = try decode(row[1],as:[String:String].self) }
-  let list = try watches()
+  let list = try watches(), own = try ownState()
   return try rows("SELECT mmsi,payload FROM positions").map { row in
    let e = try decode(row[1],as:Event.self), mmsi = row[0]
    var fields = e.fields; fields.merge(identities[mmsi] ?? [:],uniquingKeysWith: { _,new in new })
    let trail = try (mmsi == selected ? recentEvents(limit:100,mmsi:mmsi) : []).reversed().compactMap { e -> [Double]? in guard let lat = e.latitude, let lon = e.longitude else { return nil }; return [lon,lat] }
    return Track(mmsi:mmsi,lat:e.latitude!,lon:e.longitude!,fields:fields,watched:list.contains { $0.mmsi == mmsi || (!$0.imo.isEmpty && $0.imo == fields["imo"]) },trail:trail)
-  }
+  }.filter { $0.mmsi != own.mmsi && $0.fields["own"] != "true" }
  }
  public func clearReceived() throws {
-  try transaction { for table in ["events","identities","positions","alerts"] { try run("DELETE FROM \(table)") } }
+  try transaction { for table in ["events","identities","positions","alerts","own_state"] { try run("DELETE FROM \(table)") } }
   try run("PRAGMA wal_checkpoint(TRUNCATE)"); try run("VACUUM")
  }
  public func export(to url: URL) throws {

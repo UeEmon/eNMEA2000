@@ -9,14 +9,16 @@ const viewer = new Cesium.Viewer('map', {
  requestRenderMode:true,maximumRenderTimeChange:Infinity
 });
 viewer.camera.setView({destination:Cesium.Cartesian3.fromDegrees(139.7,35.5,900000)});
-let tracks = [];
+let tracks = [], followOwn = false;
+const ownId = "__own__";
 const standardSelect = document.getElementById('standard');
 NmeaSymbols.bind(standardSelect,()=>{});
 window.renderTracks = (items, options) => {
- tracks = items;
+ tracks = items; followOwn = Boolean(options.followOwn && options.own);
  if (standardSelect.value !== options.standard) { standardSelect.value=options.standard; standardSelect.dispatchEvent(new Event('change')); }
  viewer.entities.suspendEvents();
  const ids = new Set(items.map(t=>t.mmsi));
+ if(options.own) ids.add(ownId);
  for(const entity of [...viewer.entities.values]) if(!ids.has(entity.id.replace(/^trail:/,''))) viewer.entities.remove(entity);
  for(const t of items) {
   const selected = t.mmsi === options.selected;
@@ -29,13 +31,24 @@ window.renderTracks = (items, options) => {
   const oldTrail=viewer.entities.getById(trailId); if(oldTrail) viewer.entities.remove(oldTrail);
   if(selected && t.trail.length>1) viewer.entities.add({id:trailId,polyline:{positions:Cesium.Cartesian3.fromDegreesArray(t.trail.flat()),width:2,material:Cesium.Color.CYAN}});
  }
+ if(options.own) {
+  const p=options.own;
+  let own=viewer.entities.getById(ownId);
+  if(!own) own=viewer.entities.add({id:ownId,viewFrom:new Cesium.Cartesian3(0,-45000,45000)});
+  own.position=Cesium.Cartesian3.fromDegrees(p.lon,p.lat);
+  own.billboard=NmeaSymbols.graphics({own:true,platform:options.ownPlatform==='aircraft'?'aircraft':'ship'}).billboard;
+  own.label={text:'自己位置',font:'13px sans-serif',fillColor:Cesium.Color.CYAN,showBackground:true,pixelOffset:new Cesium.Cartesian2(0,28)};
+ }
  viewer.entities.resumeEvents();
+ viewer.trackedEntity=followOwn?viewer.entities.getById(ownId):undefined;
+ viewer.scene.screenSpaceCameraController.enableTranslate=!followOwn;
  viewer.selectedEntity = viewer.entities.getById(options.selected);
  viewer.scene.requestRender();
 };
-window.focusMmsi = mmsi => { const t=tracks.find(t=>t.mmsi===mmsi); if(t) { viewer.selectedEntity=viewer.entities.getById(mmsi); viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(t.lon,t.lat,45000),duration:0.6}); } };
-function picked(position) { const p=viewer.scene.pick(position); const id=p?.id?.id; return typeof id==='string' && !id.startsWith('trail:') ? id : null; }
+window.focusMmsi = mmsi => { const t=tracks.find(t=>t.mmsi===mmsi); if(t) { viewer.selectedEntity=viewer.entities.getById(mmsi); if(followOwn)return; viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(t.lon,t.lat,45000),duration:0.6}); } };
+function picked(position) { const p=viewer.scene.pick(position); const id=p?.id?.id; return typeof id==='string' && !id.startsWith('trail:') && id!==ownId ? id : null; }
 viewer.screenSpaceEventHandler.setInputAction(e=>{const mmsi=picked(e.position); if(mmsi) send({action:'select',mmsi});},Cesium.ScreenSpaceEventType.LEFT_CLICK);
+viewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 const menu=document.getElementById('quickMenu');
 let menuMmsi;
 function showMenu(mmsi,point) {

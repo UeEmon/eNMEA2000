@@ -4,6 +4,9 @@ import SwiftUI
 import NMEACore
 import NMEATransport
 @MainActor final class AppModel: ObservableObject {
+ @Published var ownState = OwnState()
+ @Published var ownPlatform = UserDefaults.standard.string(forKey:"ownPlatform") ?? "ship"
+ @Published var followOwn = UserDefaults.standard.bool(forKey:"followOwn")
  @Published var tracks: [Track] = []
  @Published var events: [Event] = []
  @Published var watches: [Watch] = []
@@ -31,6 +34,10 @@ import NMEATransport
  private var receiver: Receiver?
  private var assets: AssetServer?
  private var scheduled = false
+ var selectedBearingDistance: BearingDistance? {
+  guard let own = ownState.position, let target = selectedTrack else { return nil }
+  return BearingDistance.between(lat:own.lat,lon:own.lon,targetLat:target.lat,targetLon:target.lon)
+ }
  var selectedTrack: Track? { tracks.first { $0.mmsi == selected } }
  init() {
   beginAddressMonitoring()
@@ -78,8 +85,9 @@ import NMEATransport
   queue.async { [weak self] in
    do {
     guard let store else { return }
+    let own = try store.ownState()
     let t = try store.tracks(trailFor:selected), e = try store.recentEvents(), w = try store.watches(), a = try store.alerts()
-    Task { @MainActor in self?.tracks = t; self?.events = e; self?.watches = w; self?.alerts = a }
+    Task { @MainActor in self?.ownState = own; self?.tracks = t; self?.events = e; self?.watches = w; self?.alerts = a }
    } catch { Task { @MainActor in self?.error = error.localizedDescription } }
   }
  }

@@ -44,11 +44,17 @@ struct MapView: UIViewRepresentable {
    do {
     let data = try JSONEncoder().encode(model.tracks)
     let options: [String:Any] = ["selected":model.selected ?? "", "standard":model.standard]
-    let opts = try JSONSerialization.data(withJSONObject:options)
+    var ownOptions = options
+    ownOptions["ownPlatform"] = model.ownPlatform
+    ownOptions["followOwn"] = model.followOwn
+    if let own = model.ownState.position {
+     ownOptions["own"] = ["lat":own.lat,"lon":own.lon,"kind":own.kind] as [String:Any]
+    }
+    let opts = try JSONSerialization.data(withJSONObject:ownOptions)
     let payload = "window.renderTracks(\(String(decoding:data,as:UTF8.self)),\(String(decoding:opts,as:UTF8.self)));"
     if payload != lastPayload { lastPayload = payload; web.evaluateJavaScript(payload) { [weak self] _,error in if let error { self?.model.error = error.localizedDescription } } }
     if lastFocus != model.focusRequest, let mmsi = model.selected, let encoded = try? JSONEncoder().encode(mmsi) {
-     lastFocus = model.focusRequest; web.evaluateJavaScript("window.focusMmsi(\(String(decoding:encoded,as:UTF8.self)));")
+     lastFocus = model.focusRequest; if !model.followOwn { web.evaluateJavaScript("window.focusMmsi(\(String(decoding:encoded,as:UTF8.self)));"); }
     }
    } catch { model.error = error.localizedDescription }
   }

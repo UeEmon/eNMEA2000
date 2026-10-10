@@ -4,9 +4,9 @@ window.NmeaSymbols=(()=>{
   const key='nmea.symbolStandard',cache=new Map();
   let standard='2525';
   try{if(localStorage.getItem(key)==='APP6')standard='APP6'}catch(_){/* Storage may be disabled. */}
-  function sidc(own=false,simulation=false){return '10'+(simulation?'2':'0')+(own?'3':'1')+'3000000000000000'}
-  function graphics({own=false,simulation=false,watched=false,selected=false}={}){
-    const code=sidc(own,simulation),id=[standard,code,watched,selected].join(':');
+  function sidc(own=false,simulation=false,platform='ship'){return '10'+(simulation?'2':'0')+(own?'3':'1')+(platform==='aircraft'?'0100001101000000':'3000000000000000')}
+  function graphics({own=false,simulation=false,watched=false,selected=false,platform='ship'}={}){
+    const code=sidc(own,simulation,platform),id=[standard,code,watched,selected].join(':');
     let asset=cache.get(id);
     if(!asset){
       ms.setStandard(standard);

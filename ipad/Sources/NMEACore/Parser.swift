@@ -47,9 +47,9 @@ public final class NMEAParser {
     event.fields["lat"] = String(a); event.fields["lon"] = String(b)
    }
    switch kind {
-   case "RMC": if f.count > 2 && f[2] == "A" { position(3,4,5,6) }; set("speed",7); set("course",8); set("utc",1); set("date",9)
+   case "RMC": if f.count > 2 && f[2] == "A" && (f.count <= 12 || f[12] != "N") { position(3,4,5,6) }; set("speed",7); set("course",8); set("utc",1); set("date",9)
    case "GGA": if f.count > 6 && (Int(f[6]) ?? 0) > 0 { position(2,3,4,5) }; set("quality",6); set("satellites",7); set("altitude",9); set("utc",1)
-   case "GLL": if f.count > 6 && f[6] == "A" { position(1,2,3,4) }; set("utc",5)
+   case "GLL": if f.count > 6 && f[6] == "A" && (f.count <= 7 || f[7] != "N") { position(1,2,3,4) }; set("utc",5)
    case "VTG": set("course",1); set("speed",5)
    case "HDT", "HDG": set("heading",1)
    case "ZDA": set("utc",1); set("day",2); set("month",3); set("year",4)

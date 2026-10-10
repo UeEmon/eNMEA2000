@@ -21,8 +21,30 @@ const {chromium}=require('../../browser-tests/node_modules/playwright');
   await page.mouse.click(point.x,point.y,{button:'right'});
   await page.getByRole('menuitem',{name:'監視対象に登録'}).click();
   await page.waitForFunction(()=>window.messages.some(m=>m.action==='watch'&&m.mmsi==='123456789'));
+  // Own position remains at the GIS center even when selecting/focusing another target.
+  for(const standard of ['2525','APP6']) for(const ownPlatform of ['ship','aircraft']) {
+   await page.evaluate(({tracks,standard,ownPlatform})=>window.renderTracks(tracks,{selected:'123456789',standard,ownPlatform,followOwn:true,own:{lat:35.4,lon:139.6,kind:'VDO'}}),{tracks,standard,ownPlatform});
+   await page.waitForTimeout(500);
+   const state=await page.evaluate(()=>{
+    const own=viewer.entities.getById('__own__'),p=Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,own.position.getValue(viewer.clock.currentTime));
+    return {tracked:viewer.trackedEntity?.id,selected:viewer.selectedEntity?.id,x:p.x,y:p.y,w:viewer.canvas.clientWidth,h:viewer.canvas.clientHeight,code:NmeaSymbols.sidc(true,false,'aircraft'),image:own.billboard.image.getValue().toDataURL()};
+   });
+   if(state.tracked!=='__own__'||state.selected!=='123456789'||Math.abs(state.x-state.w/2)>3||Math.abs(state.y-state.h/2)>3)throw Error('Own center: '+JSON.stringify(state));
+   await page.evaluate(()=>window.focusMmsi('123456789'));
+   if(await page.evaluate(()=>viewer.trackedEntity?.id)!=='__own__')throw Error('Target selection lost own tracking');
+   await page.evaluate(({tracks,standard,ownPlatform})=>window.renderTracks(tracks,{selected:'123456789',standard,ownPlatform,followOwn:true,own:{lat:35.45,lon:139.65,kind:'RMC'}}),{tracks,standard,ownPlatform});
+   await page.waitForTimeout(500);
+   const centered=await page.evaluate(()=>{const own=viewer.entities.getById('__own__'),p=Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,own.position.getValue(viewer.clock.currentTime));return Math.abs(p.x-viewer.canvas.clientWidth/2)<3&&Math.abs(p.y-viewer.canvas.clientHeight/2)<3});
+   if(!centered)throw Error('Updated own position not centered');
+  }
+  const images=await page.evaluate(()=>['ship','aircraft'].map(platform=>NmeaSymbols.graphics({own:true,platform}).billboard.image.toDataURL()));
+  if(images[0]===images[1])throw Error('Ship and aircraft symbols must differ');
+  await page.evaluate(({tracks})=>window.renderTracks(tracks,{selected:'123456789',standard:'2525',ownPlatform:'ship',followOwn:false,own:{lat:35.45,lon:139.65}}),{tracks});
+  if(await page.evaluate(()=>Boolean(viewer.trackedEntity)||!viewer.scene.screenSpaceCameraController.enableTranslate))throw Error('Follow off must release the map');
+  await page.evaluate(({tracks})=>window.renderTracks(tracks,{selected:'123456789',standard:'2525',followOwn:true}),{tracks});
+  if(await page.evaluate(()=>Boolean(viewer.trackedEntity)||Boolean(viewer.entities.getById('__own__'))))throw Error('No fix must not produce own symbol');
   await page.screenshot({path:'/tmp/enmea-ipad-map.png'});
   if(errors.length||external.length)throw Error(JSON.stringify({errors,external}));
-  console.log('PASS: offline Cesium + both symbol standards + selection/trail + watch registration');
+  console.log('PASS: offline Cesium + both symbol standards + selection/trail + watch registration + own ship/aircraft + moving center lock on/off');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});
