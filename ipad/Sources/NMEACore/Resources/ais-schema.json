@@ -1,0 +1,4192 @@
+{
+  "MessageType1": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "status",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "turn",
+      "width": 8,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_turn",
+      "offset": 42
+    },
+    {
+      "name": "speed",
+      "width": 10,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "to_speed",
+      "offset": 50
+    },
+    {
+      "name": "accuracy",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 60
+    },
+    {
+      "name": "lon",
+      "width": 28,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 61
+    },
+    {
+      "name": "lat",
+      "width": 27,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 89
+    },
+    {
+      "name": "course",
+      "width": 12,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "to_10th",
+      "offset": 116
+    },
+    {
+      "name": "heading",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 128
+    },
+    {
+      "name": "second",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 137
+    },
+    {
+      "name": "maneuver",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 143
+    },
+    {
+      "name": "spare_1",
+      "width": 3,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 145
+    },
+    {
+      "name": "raim",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 148
+    },
+    {
+      "name": "radio",
+      "width": 19,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 149
+    }
+  ],
+  "MessageType2": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "status",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "turn",
+      "width": 8,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_turn",
+      "offset": 42
+    },
+    {
+      "name": "speed",
+      "width": 10,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "to_speed",
+      "offset": 50
+    },
+    {
+      "name": "accuracy",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 60
+    },
+    {
+      "name": "lon",
+      "width": 28,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 61
+    },
+    {
+      "name": "lat",
+      "width": 27,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 89
+    },
+    {
+      "name": "course",
+      "width": 12,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "to_10th",
+      "offset": 116
+    },
+    {
+      "name": "heading",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 128
+    },
+    {
+      "name": "second",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 137
+    },
+    {
+      "name": "maneuver",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 143
+    },
+    {
+      "name": "spare_1",
+      "width": 3,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 145
+    },
+    {
+      "name": "raim",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 148
+    },
+    {
+      "name": "radio",
+      "width": 19,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 149
+    }
+  ],
+  "MessageType3": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "status",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "turn",
+      "width": 8,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_turn",
+      "offset": 42
+    },
+    {
+      "name": "speed",
+      "width": 10,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "to_speed",
+      "offset": 50
+    },
+    {
+      "name": "accuracy",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 60
+    },
+    {
+      "name": "lon",
+      "width": 28,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 61
+    },
+    {
+      "name": "lat",
+      "width": 27,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 89
+    },
+    {
+      "name": "course",
+      "width": 12,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "to_10th",
+      "offset": 116
+    },
+    {
+      "name": "heading",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 128
+    },
+    {
+      "name": "second",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 137
+    },
+    {
+      "name": "maneuver",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 143
+    },
+    {
+      "name": "spare_1",
+      "width": 3,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 145
+    },
+    {
+      "name": "raim",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 148
+    },
+    {
+      "name": "radio",
+      "width": 19,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 149
+    }
+  ],
+  "MessageType4": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "year",
+      "width": 14,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "month",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 52
+    },
+    {
+      "name": "day",
+      "width": 5,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 56
+    },
+    {
+      "name": "hour",
+      "width": 5,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 61
+    },
+    {
+      "name": "minute",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 66
+    },
+    {
+      "name": "second",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 72
+    },
+    {
+      "name": "accuracy",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 78
+    },
+    {
+      "name": "lon",
+      "width": 28,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 79
+    },
+    {
+      "name": "lat",
+      "width": 27,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 107
+    },
+    {
+      "name": "epfd",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 134
+    },
+    {
+      "name": "spare_1",
+      "width": 10,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 138
+    },
+    {
+      "name": "raim",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 148
+    },
+    {
+      "name": "radio",
+      "width": 19,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 149
+    }
+  ],
+  "MessageType5": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "ais_version",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "imo",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "callsign",
+      "width": 42,
+      "kind": "str",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 70
+    },
+    {
+      "name": "shipname",
+      "width": 120,
+      "kind": "str",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 112
+    },
+    {
+      "name": "ship_type",
+      "width": 8,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 232
+    },
+    {
+      "name": "to_bow",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 240
+    },
+    {
+      "name": "to_stern",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 249
+    },
+    {
+      "name": "to_port",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 258
+    },
+    {
+      "name": "to_starboard",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 264
+    },
+    {
+      "name": "epfd",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 270
+    },
+    {
+      "name": "month",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 274
+    },
+    {
+      "name": "day",
+      "width": 5,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 278
+    },
+    {
+      "name": "hour",
+      "width": 5,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 283
+    },
+    {
+      "name": "minute",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 288
+    },
+    {
+      "name": "draught",
+      "width": 8,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "to_10th",
+      "offset": 294
+    },
+    {
+      "name": "destination",
+      "width": 120,
+      "kind": "str",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 302
+    },
+    {
+      "name": "dte",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 422
+    },
+    {
+      "name": "spare_1",
+      "width": 1,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 423
+    }
+  ],
+  "MessageType6": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "seqno",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "dest_mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "retransmit",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 70
+    },
+    {
+      "name": "spare_1",
+      "width": 1,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 71
+    },
+    {
+      "name": "dac",
+      "width": 10,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 72
+    },
+    {
+      "name": "fid",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 82
+    },
+    {
+      "name": "data",
+      "width": 920,
+      "kind": "bytes",
+      "signed": false,
+      "variable": true,
+      "spare": false,
+      "converter": "",
+      "offset": 88
+    }
+  ],
+  "MessageType7": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "mmsi1",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "mmsiseq1",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 70
+    },
+    {
+      "name": "mmsi2",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 72
+    },
+    {
+      "name": "mmsiseq2",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 102
+    },
+    {
+      "name": "mmsi3",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 104
+    },
+    {
+      "name": "mmsiseq3",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 134
+    },
+    {
+      "name": "mmsi4",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 136
+    },
+    {
+      "name": "mmsiseq4",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 166
+    }
+  ],
+  "MessageType9": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "alt",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "speed",
+      "width": 10,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 50
+    },
+    {
+      "name": "accuracy",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 60
+    },
+    {
+      "name": "lon",
+      "width": 28,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 61
+    },
+    {
+      "name": "lat",
+      "width": 27,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 89
+    },
+    {
+      "name": "course",
+      "width": 12,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "to_10th",
+      "offset": 116
+    },
+    {
+      "name": "second",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 128
+    },
+    {
+      "name": "reserved_1",
+      "width": 8,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 134
+    },
+    {
+      "name": "dte",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 142
+    },
+    {
+      "name": "spare_1",
+      "width": 3,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 143
+    },
+    {
+      "name": "assigned",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 146
+    },
+    {
+      "name": "raim",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 147
+    },
+    {
+      "name": "radio",
+      "width": 20,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 148
+    }
+  ],
+  "MessageType10": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "dest_mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "spare_2",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 70
+    }
+  ],
+  "MessageType11": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "year",
+      "width": 14,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "month",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 52
+    },
+    {
+      "name": "day",
+      "width": 5,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 56
+    },
+    {
+      "name": "hour",
+      "width": 5,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 61
+    },
+    {
+      "name": "minute",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 66
+    },
+    {
+      "name": "second",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 72
+    },
+    {
+      "name": "accuracy",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 78
+    },
+    {
+      "name": "lon",
+      "width": 28,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 79
+    },
+    {
+      "name": "lat",
+      "width": 27,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 107
+    },
+    {
+      "name": "epfd",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 134
+    },
+    {
+      "name": "spare_1",
+      "width": 10,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 138
+    },
+    {
+      "name": "raim",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 148
+    },
+    {
+      "name": "radio",
+      "width": 19,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 149
+    }
+  ],
+  "MessageType12": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "seqno",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "dest_mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "retransmit",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 70
+    },
+    {
+      "name": "spare_1",
+      "width": 1,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 71
+    },
+    {
+      "name": "text",
+      "width": 936,
+      "kind": "str",
+      "signed": false,
+      "variable": true,
+      "spare": false,
+      "converter": "",
+      "offset": 72
+    }
+  ],
+  "MessageType13": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "mmsi1",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "mmsiseq1",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 70
+    },
+    {
+      "name": "mmsi2",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 72
+    },
+    {
+      "name": "mmsiseq2",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 102
+    },
+    {
+      "name": "mmsi3",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 104
+    },
+    {
+      "name": "mmsiseq3",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 134
+    },
+    {
+      "name": "mmsi4",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 136
+    },
+    {
+      "name": "mmsiseq4",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 166
+    }
+  ],
+  "MessageType14": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "text",
+      "width": 968,
+      "kind": "str",
+      "signed": false,
+      "variable": true,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    }
+  ],
+  "MessageType15": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "mmsi1",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "type1_1",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 70
+    },
+    {
+      "name": "offset1_1",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 76
+    },
+    {
+      "name": "spare_2",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 88
+    },
+    {
+      "name": "type1_2",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 90
+    },
+    {
+      "name": "offset1_2",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 96
+    },
+    {
+      "name": "spare_3",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 108
+    },
+    {
+      "name": "mmsi2",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 110
+    },
+    {
+      "name": "type2_1",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 140
+    },
+    {
+      "name": "offset2_1",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 146
+    },
+    {
+      "name": "spare_4",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 158
+    }
+  ],
+  "MessageType17": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "lon",
+      "width": 18,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon_600",
+      "offset": 40
+    },
+    {
+      "name": "lat",
+      "width": 17,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon_600",
+      "offset": 58
+    },
+    {
+      "name": "spare_2",
+      "width": 5,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 75
+    },
+    {
+      "name": "data",
+      "width": 736,
+      "kind": "bytes",
+      "signed": false,
+      "variable": true,
+      "spare": false,
+      "converter": "",
+      "offset": 80
+    }
+  ],
+  "MessageType18": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "reserved_1",
+      "width": 8,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "speed",
+      "width": 10,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "to_speed",
+      "offset": 46
+    },
+    {
+      "name": "accuracy",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 56
+    },
+    {
+      "name": "lon",
+      "width": 28,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 57
+    },
+    {
+      "name": "lat",
+      "width": 27,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 85
+    },
+    {
+      "name": "course",
+      "width": 12,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "to_10th",
+      "offset": 112
+    },
+    {
+      "name": "heading",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 124
+    },
+    {
+      "name": "second",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 133
+    },
+    {
+      "name": "reserved_2",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 139
+    },
+    {
+      "name": "cs",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 141
+    },
+    {
+      "name": "display",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 142
+    },
+    {
+      "name": "dsc",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 143
+    },
+    {
+      "name": "band",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 144
+    },
+    {
+      "name": "msg22",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 145
+    },
+    {
+      "name": "assigned",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 146
+    },
+    {
+      "name": "raim",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 147
+    },
+    {
+      "name": "radio",
+      "width": 20,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 148
+    }
+  ],
+  "MessageType19": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "reserved_1",
+      "width": 8,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "speed",
+      "width": 10,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "to_speed",
+      "offset": 46
+    },
+    {
+      "name": "accuracy",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 56
+    },
+    {
+      "name": "lon",
+      "width": 28,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 57
+    },
+    {
+      "name": "lat",
+      "width": 27,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 85
+    },
+    {
+      "name": "course",
+      "width": 12,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "to_10th",
+      "offset": 112
+    },
+    {
+      "name": "heading",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 124
+    },
+    {
+      "name": "second",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 133
+    },
+    {
+      "name": "reserved_2",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 139
+    },
+    {
+      "name": "shipname",
+      "width": 120,
+      "kind": "str",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 143
+    },
+    {
+      "name": "ship_type",
+      "width": 8,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 263
+    },
+    {
+      "name": "to_bow",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 271
+    },
+    {
+      "name": "to_stern",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 280
+    },
+    {
+      "name": "to_port",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 289
+    },
+    {
+      "name": "to_starboard",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 295
+    },
+    {
+      "name": "epfd",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 301
+    },
+    {
+      "name": "raim",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 305
+    },
+    {
+      "name": "dte",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 306
+    },
+    {
+      "name": "assigned",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 307
+    },
+    {
+      "name": "spare_1",
+      "width": 4,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 308
+    }
+  ],
+  "MessageType20": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "offset1",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "number1",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 52
+    },
+    {
+      "name": "timeout1",
+      "width": 3,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 56
+    },
+    {
+      "name": "increment1",
+      "width": 11,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 59
+    },
+    {
+      "name": "offset2",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 70
+    },
+    {
+      "name": "number2",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 82
+    },
+    {
+      "name": "timeout2",
+      "width": 3,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 86
+    },
+    {
+      "name": "increment2",
+      "width": 11,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 89
+    },
+    {
+      "name": "offset3",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 100
+    },
+    {
+      "name": "number3",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 112
+    },
+    {
+      "name": "timeout3",
+      "width": 3,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 116
+    },
+    {
+      "name": "increment3",
+      "width": 11,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 119
+    },
+    {
+      "name": "offset4",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 130
+    },
+    {
+      "name": "number4",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 142
+    },
+    {
+      "name": "timeout4",
+      "width": 3,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 146
+    },
+    {
+      "name": "increment4",
+      "width": 11,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 149
+    }
+  ],
+  "MessageType21": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "aid_type",
+      "width": 5,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "name",
+      "width": 120,
+      "kind": "str",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 43
+    },
+    {
+      "name": "accuracy",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 163
+    },
+    {
+      "name": "lon",
+      "width": 28,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 164
+    },
+    {
+      "name": "lat",
+      "width": 27,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 192
+    },
+    {
+      "name": "to_bow",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 219
+    },
+    {
+      "name": "to_stern",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 228
+    },
+    {
+      "name": "to_port",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 237
+    },
+    {
+      "name": "to_starboard",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 243
+    },
+    {
+      "name": "epfd",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 249
+    },
+    {
+      "name": "second",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 253
+    },
+    {
+      "name": "off_position",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 259
+    },
+    {
+      "name": "reserved_1",
+      "width": 8,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 260
+    },
+    {
+      "name": "raim",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 268
+    },
+    {
+      "name": "virtual_aid",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 269
+    },
+    {
+      "name": "assigned",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 270
+    },
+    {
+      "name": "spare_1",
+      "width": 1,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 271
+    },
+    {
+      "name": "name_ext",
+      "width": 88,
+      "kind": "str",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 272
+    }
+  ],
+  "MessageType23": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "ne_lon",
+      "width": 18,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon_600",
+      "offset": 40
+    },
+    {
+      "name": "ne_lat",
+      "width": 17,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon_600",
+      "offset": 58
+    },
+    {
+      "name": "sw_lon",
+      "width": 18,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon_600",
+      "offset": 75
+    },
+    {
+      "name": "sw_lat",
+      "width": 17,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon_600",
+      "offset": 93
+    },
+    {
+      "name": "station_type",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 110
+    },
+    {
+      "name": "ship_type",
+      "width": 8,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 114
+    },
+    {
+      "name": "spare_2",
+      "width": 22,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 122
+    },
+    {
+      "name": "txrx",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 144
+    },
+    {
+      "name": "interval",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 146
+    },
+    {
+      "name": "quiet",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 150
+    },
+    {
+      "name": "spare_3",
+      "width": 6,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 154
+    }
+  ],
+  "MessageType27": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "accuracy",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "raim",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 39
+    },
+    {
+      "name": "status",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "NavigationStatus",
+      "offset": 40
+    },
+    {
+      "name": "lon",
+      "width": 18,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon_600",
+      "offset": 44
+    },
+    {
+      "name": "lat",
+      "width": 17,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon_600",
+      "offset": 62
+    },
+    {
+      "name": "speed",
+      "width": 6,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 79
+    },
+    {
+      "name": "course",
+      "width": 9,
+      "kind": "float",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 85
+    },
+    {
+      "name": "gnss",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 94
+    },
+    {
+      "name": "spare_1",
+      "width": 1,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 95
+    }
+  ],
+  "MessageType28": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "second",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "lon",
+      "width": 28,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 44
+    },
+    {
+      "name": "lat",
+      "width": 27,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon",
+      "offset": 72
+    },
+    {
+      "name": "restricted",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "AtoNRestrictedUseInidicator",
+      "offset": 99
+    },
+    {
+      "name": "station_type",
+      "width": 3,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 101
+    },
+    {
+      "name": "aid_type",
+      "width": 7,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 104
+    },
+    {
+      "name": "iala_mrn",
+      "width": 17,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 111
+    },
+    {
+      "name": "dimension",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "AtoNDimensionType",
+      "offset": 128
+    },
+    {
+      "name": "dimensions_a",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 132
+    },
+    {
+      "name": "dimensions_b",
+      "width": 11,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 141
+    },
+    {
+      "name": "dimension_additional_data",
+      "width": 1,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 152
+    },
+    {
+      "name": "charted_status",
+      "width": 1,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 153
+    },
+    {
+      "name": "station_status",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 154
+    },
+    {
+      "name": "status_bits",
+      "width": 8,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 158
+    },
+    {
+      "name": "spare_1",
+      "width": 1,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 166
+    },
+    {
+      "name": "auth",
+      "width": 1,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 167
+    }
+  ],
+  "MessageType8Default": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "dac",
+      "width": 10,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "fid",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 50
+    },
+    {
+      "name": "data",
+      "width": 952,
+      "kind": "bytes",
+      "signed": false,
+      "variable": true,
+      "spare": false,
+      "converter": "",
+      "offset": 56
+    }
+  ],
+  "MessageType16DestinationA": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "mmsi1",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "offset1",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 70
+    },
+    {
+      "name": "increment1",
+      "width": 10,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 82
+    },
+    {
+      "name": "spare_2",
+      "width": 4,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 92
+    }
+  ],
+  "MessageType16DestinationAB": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "mmsi1",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "offset1",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 70
+    },
+    {
+      "name": "increment1",
+      "width": 10,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 82
+    },
+    {
+      "name": "mmsi2",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 92
+    },
+    {
+      "name": "offset2",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 122
+    },
+    {
+      "name": "increment2",
+      "width": 10,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 134
+    }
+  ],
+  "MessageType22Addressed": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "channel_a",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "channel_b",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 52
+    },
+    {
+      "name": "txrx",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 64
+    },
+    {
+      "name": "power",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 68
+    },
+    {
+      "name": "dest1",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 69
+    },
+    {
+      "name": "empty_1",
+      "width": 5,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 99
+    },
+    {
+      "name": "dest2",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 104
+    },
+    {
+      "name": "empty_2",
+      "width": 5,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 134
+    },
+    {
+      "name": "addressed",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 139
+    },
+    {
+      "name": "band_a",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 140
+    },
+    {
+      "name": "band_b",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 141
+    },
+    {
+      "name": "zonesize",
+      "width": 3,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 142
+    },
+    {
+      "name": "spare_2",
+      "width": 23,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 145
+    }
+  ],
+  "MessageType22Broadcast": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "spare_1",
+      "width": 2,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "channel_a",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "channel_b",
+      "width": 12,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 52
+    },
+    {
+      "name": "txrx",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 64
+    },
+    {
+      "name": "power",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 68
+    },
+    {
+      "name": "ne_lon",
+      "width": 18,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon_600",
+      "offset": 69
+    },
+    {
+      "name": "ne_lat",
+      "width": 17,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon_600",
+      "offset": 87
+    },
+    {
+      "name": "sw_lon",
+      "width": 18,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon_600",
+      "offset": 104
+    },
+    {
+      "name": "sw_lat",
+      "width": 17,
+      "kind": "float",
+      "signed": true,
+      "variable": false,
+      "spare": false,
+      "converter": "to_lat_lon_600",
+      "offset": 122
+    },
+    {
+      "name": "addressed",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 139
+    },
+    {
+      "name": "band_a",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 140
+    },
+    {
+      "name": "band_b",
+      "width": 1,
+      "kind": "bool",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 141
+    },
+    {
+      "name": "zonesize",
+      "width": 3,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 142
+    },
+    {
+      "name": "spare_2",
+      "width": 23,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 145
+    }
+  ],
+  "MessageType24PartA": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "partno",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "shipname",
+      "width": 120,
+      "kind": "str",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "spare_1",
+      "width": 8,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 160
+    }
+  ],
+  "MessageType24PartB": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "partno",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "ship_type",
+      "width": 8,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "vendorid",
+      "width": 18,
+      "kind": "str",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 48
+    },
+    {
+      "name": "model",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 66
+    },
+    {
+      "name": "serial",
+      "width": 20,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 70
+    },
+    {
+      "name": "callsign",
+      "width": 42,
+      "kind": "str",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 90
+    },
+    {
+      "name": "to_bow",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 132
+    },
+    {
+      "name": "to_stern",
+      "width": 9,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 141
+    },
+    {
+      "name": "to_port",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 150
+    },
+    {
+      "name": "to_starboard",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 156
+    },
+    {
+      "name": "spare_1",
+      "width": 6,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 162
+    }
+  ],
+  "MessageType24PartBAuxiliaryCraft": [
+    {
+      "name": "msg_type",
+      "width": 6,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 0
+    },
+    {
+      "name": "repeat",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 6
+    },
+    {
+      "name": "mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 8
+    },
+    {
+      "name": "partno",
+      "width": 2,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 38
+    },
+    {
+      "name": "ship_type",
+      "width": 8,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 40
+    },
+    {
+      "name": "vendorid",
+      "width": 18,
+      "kind": "str",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 48
+    },
+    {
+      "name": "model",
+      "width": 4,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 66
+    },
+    {
+      "name": "serial",
+      "width": 20,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 70
+    },
+    {
+      "name": "callsign",
+      "width": 42,
+      "kind": "str",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 90
+    },
+    {
+      "name": "mothership_mmsi",
+      "width": 30,
+      "kind": "int",
+      "signed": false,
+      "variable": false,
+      "spare": false,
+      "converter": "",
+      "offset": 132
+    },
+    {
+      "name": "spare_1",
+      "width": 6,
+      "kind": "bytes",
+      "signed": false,
+      "variable": false,
+      "spare": true,
+      "converter": "",
+      "offset": 162
+    }
+  ]
+}
