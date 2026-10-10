@@ -20,7 +20,7 @@ public final class NMEAParser {
    guard let tag = f.first, tag.count >= 5 else { throw NMEAError.invalid("NMEA tag invalid") }
    let kind = String(tag.suffix(3)); event.kind = kind; event.fields["talker"] = String(tag.prefix(2))
    if kind == "VDM" || kind == "VDO" {
-    guard f.count == 7, let total = Int(f[1]), (1...9).contains(total), let part = Int(f[2]), (1...total).contains(part), let fill = Int(f[6]), (0...5).contains(fill), part == total || fill == 0, !f[5].isEmpty else { throw NMEAError.invalid("AIS fragment header") }
+    guard f.count == 7, let total = Int(f[1]), (1...9).contains(total), let part = Int(f[2]), (1...total).contains(part), let fill = Int(f[6]), (0...5).contains(fill), part == total || fill == 0, !f[5].isEmpty, f[5].utf8.count <= 178, (f[3].isEmpty || (f[3].utf8.count == 1 && Int(f[3]) != nil)), ["","A","B","1","2"].contains(f[4]) else { throw NMEAError.invalid("AIS fragment header") }
     // Decode armoring early, including incomplete fragments, to reject corrupt assemblies.
     guard f[5].utf8.allSatisfy({ (48...87).contains($0) || (96...119).contains($0) }) else { throw NMEAError.invalid("AIS armoring") }
     var payload = f[5]
@@ -32,6 +32,7 @@ public final class NMEAParser {
       fragments[key] = Assembly(time:now,next:2,payload:payload,raw:[sentence]); event.status = "pending"; return event
      }
      guard var a = fragments[key], a.next == part else { fragments.removeValue(forKey:key); throw NMEAError.invalid("AIS orphan/out-of-order fragment") }
+     guard a.payload.utf8.count + payload.utf8.count <= 178 else { fragments.removeValue(forKey:key); throw NMEAError.invalid("AIS assembly oversized") }
      a.payload += payload; a.raw.append(sentence); a.next += 1
      if part < total { fragments[key] = a; event.status = "pending"; return event }
      fragments.removeValue(forKey:key); payload = a.payload; event.raw = a.raw.joined(separator:"\n")

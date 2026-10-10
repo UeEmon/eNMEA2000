@@ -55,6 +55,10 @@ xcodebuild -project ipad/eNMEA-iPad.xcodeproj -scheme eNMEA-iPad \
   -derivedDataPath ipad/DerivedData CODE_SIGNING_ALLOWED=NO build
 ```
 
-`.github/workflows/ipad.yml` がmacOS上でAIS全タイプ・不正文・分割文・座標・バイナリ形式・SQLite永続化・監視重複・アラートをテストし、シミュレータ向けアプリをビルドします。実機のUDP/TCP、タッチ操作、オフライン地図、バックグラウンド停止は上記手順で確認してください。
+`.github/workflows/ipad.yml` がmacOS上でAIS全タイプ・不正文・分割文・座標・バイナリ形式・SQLite永続化・監視重複・アラートと実際のUDP/TCP受信・同梱ファイル配信をテストし、シミュレータ向けアプリをビルドします。別ジョブで外部通信を遮断したGIS表示・航跡・両規格のシンボル・クイックメニューを検証します。実機のUDP/TCP、タッチ操作、オフライン地図、バックグラウンド停止は上記手順で確認してください。
 
 地図のHTTPは127.0.0.1の自動割当ポートで同梱ファイルだけを読み出します。LANへのWeb公開はありません。WebViewの外部遷移を禁止し、パス逸脱を拒否します。8080/8888は固定使用しません。AWS/Docker版のWebコンテナ内ポート80と外部ポートは変更しません。
+
+## 検証結果（2026-10-10）
+
+[iPad CI](https://github.com/UeEmon/eNMEA2000/actions/runs/38026946480) でSwiftテスト9件（失敗0件）、オフラインGIS操作、Xcode 16.4 / iOS Simulator 18.5向けのarm64・x86_64ビルドが通過しました。実機署名・実機インストール、iPadのWebView描画・タッチ操作、実LANでの受信は利用者のMac/iPadで確認してください。Swift 5言語モードでビルドし、可変の受信・DBオブジェクトを1つのシリアルキューで操作します。
