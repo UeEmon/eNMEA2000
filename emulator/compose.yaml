@@ -11,8 +11,15 @@ services:
     environment:
       NMEA_TARGET_HOST: ${NMEA_TARGET_HOST:-host.docker.internal}
       NMEA_TARGET_PORT: ${NMEA_TARGET_PORT:-10111}
+      NMEA_TARGET_PROTOCOL: ${NMEA_TARGET_PROTOCOL:-tcp}
+      NMEA_OUTPUT_FILE: /data/output.json
+    volumes:
+      - emulator-settings:/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
     logging:
       driver: json-file
       options: {max-size: "10m", max-file: "3"}
+
+volumes:
+  emulator-settings:

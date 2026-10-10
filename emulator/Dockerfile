@@ -7,7 +7,7 @@ FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /srv
 COPY emulator/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && useradd --uid 10002 -m sim
+RUN pip install --no-cache-dir -r requirements.txt && useradd --uid 10002 -m sim && mkdir /data && chown sim:sim /data
 COPY --chown=sim:sim emulator/server.py ./server.py
 COPY --chown=sim:sim emulator/ais_suite.py emulator/ais-all-types.log ./
 COPY --chown=sim:sim emulator/static ./static

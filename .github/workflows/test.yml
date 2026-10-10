@@ -35,6 +35,7 @@ jobs:
       - run: node browser-tests/ais-smoke.js
       - run: node browser-tests/emulator-ais-smoke.js
       - run: node browser-tests/data-delete-smoke.js
+      - run: node browser-tests/emulator-output-smoke.js
       - if: always()
         run: docker compose logs --tail=100
       - if: always()
