@@ -1,9 +1,14 @@
-"""Stand-alone simulator: configuration from localhost UI; TCP destination fixed in env."""
+"""Stand-alone simulator: configuration from localhost UI; TCP/UDP destination configurable from the Web UI."""
 import asyncio
 import contextlib
 from datetime import datetime, timezone
 import math
 import os
+import json
+import socket
+import ipaddress
+import re
+from typing import Literal
 import time
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -16,6 +21,74 @@ from ais_suite import SCENARIOS, BY_ID, with_mmsi
 
 HOST=os.getenv('NMEA_TARGET_HOST','host.docker.internal')
 PORT=int(os.getenv('NMEA_TARGET_PORT','10111'))
+
+class OutputConfig(BaseModel):
+    host: str = Field(min_length=1, max_length=253)
+    port: int = Field(ge=1, le=65535)
+    protocol: Literal['tcp', 'udp'] = 'tcp'
+
+    @model_validator(mode='after')
+    def valid_host(self):
+        self.host = self.host.strip()
+        try:
+            ipaddress.ip_address(self.host)
+        except ValueError:
+            labels = self.host.rstrip('.').split('.')
+            if not all(re.fullmatch(r'[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?', label) for label in labels):
+                raise ValueError('IPアドレスまたはホスト名を入力してください（URLは不可）')
+        return self
+
+OUTPUT_FILE = Path(os.getenv('NMEA_OUTPUT_FILE', '/data/output.json'))
+output_override = None
+if OUTPUT_FILE.exists():
+    output_override = OutputConfig.model_validate_json(OUTPUT_FILE.read_text())
+
+def output_config():
+    return output_override or OutputConfig(host=HOST, port=PORT, protocol=os.getenv('NMEA_TARGET_PROTOCOL', 'tcp'))
+
+def output_target():
+    cfg = output_config()
+    host = f'[{cfg.host}]' if ':' in cfg.host else cfg.host
+    return f'{cfg.protocol.upper()} {host}:{cfg.port}'
+
+class DatagramWriter:
+    """StreamWriter-compatible adapter: each CRLF sentence becomes one datagram."""
+    def __init__(self, sock):
+        self.sock = sock
+        self.pending = b''
+
+    def write(self, data):
+        self.pending += data
+
+    async def drain(self):
+        data, self.pending = self.pending, b''
+        for line in data.split(b'\r\n'):
+            if line:
+                await asyncio.get_running_loop().sock_sendall(self.sock, line + b'\r\n')
+
+    def close(self):
+        self.sock.close()
+
+    async def wait_closed(self):
+        pass
+
+async def open_output():
+    cfg = output_config()
+    if cfg.protocol == 'tcp':
+        return await asyncio.open_connection(cfg.host, cfg.port)
+    loop = asyncio.get_running_loop()
+    addresses = await loop.getaddrinfo(cfg.host, cfg.port, type=socket.SOCK_DGRAM)
+    last_error = None
+    for family, kind, proto, _, address in addresses:
+        sock = socket.socket(family, kind, proto)
+        sock.setblocking(False)
+        try:
+            await loop.sock_connect(sock, address)
+            return None, DatagramWriter(sock)
+        except OSError as exc:
+            sock.close()
+            last_error = exc
+    raise last_error or OSError('送信先を解決できません')
 
 class Waypoint(BaseModel):
     lat: float = Field(ge=-89, le=89)
@@ -97,7 +170,7 @@ class Simulator:
                   'lon':((self.longitude+i*.008+180)%360)-180}
                  for i in range(self.config.vessel_count)] if self.config.ais and self.config.ais_type1 else []
         return dict(config=self.config.model_dump(),active=self.active,connected=self.connected,
-                    lines=self.lines,error=self.error,preview=self.preview[-12:],target=f'{HOST}:{PORT}',
+                    lines=self.lines,error=self.error,preview=self.preview[-12:],target=output_target(),output=output_config().model_dump(),
                     position={'lat':self.latitude,'lon':self.longitude},course=self.config.course,
                     current_speed=self.current_speed,route_index=self.route_index,route_done=self.route_done,
                     vessels=vessels)
@@ -156,7 +229,7 @@ class Simulator:
         self.active=True
         while self.active:
             try:
-                _,self.writer=await asyncio.wait_for(asyncio.open_connection(HOST,PORT),5)
+                _,self.writer=await asyncio.wait_for(open_output(),5)
                 self.connected=True;self.error=''
                 while self.active:
                     frames=self.generate()
@@ -213,7 +286,7 @@ async def lifespan(app):
     finally:
         await sim.stop()
         await ring_motion.stop()
-app=FastAPI(title='NMEA TCP Emulator',lifespan=lifespan,openapi_url=None,docs_url=None,redoc_url=None)
+app=FastAPI(title='NMEA TCP/UDP Emulator',lifespan=lifespan,openapi_url=None,docs_url=None,redoc_url=None)
 
 @app.middleware('http')
 async def same_origin(request:Request,next_call):
@@ -230,11 +303,12 @@ def health():return {'ok':True}
 def status():return sim.status()
 @app.post('/api/start')
 async def start(config:Config):
-    await sim.stop()
-    sim.config=config;sim.latitude=config.latitude;sim.longitude=config.longitude;sim.tick=0
-    sim.route_index=0;sim.route_done=False;sim.current_speed=0
-    sim.task=asyncio.create_task(sim.run())
-    return sim.status()
+    async with ring_motion.lock:
+        await sim.stop()
+        sim.config=config;sim.latitude=config.latitude;sim.longitude=config.longitude;sim.tick=0
+        sim.route_index=0;sim.route_done=False;sim.current_speed=0
+        sim.task=asyncio.create_task(sim.run())
+        return sim.status()
 
 @app.post('/api/position')
 async def set_position(position:Waypoint):
@@ -304,6 +378,10 @@ def ais_scenarios():
 
 @app.post('/api/ais/send')
 async def send_ais_scenarios(request: AisSuiteRequest):
+    async with ring_motion.lock:
+        return await _send_ais_scenarios(request)
+
+async def _send_ais_scenarios(request: AisSuiteRequest):
     if len(set(request.scenario_ids)) != len(request.scenario_ids):
         raise HTTPException(422, 'Duplicate scenario id')
     unknown = [id for id in request.scenario_ids if id not in BY_ID]
@@ -323,11 +401,11 @@ async def send_ais_scenarios(request: AisSuiteRequest):
         frames = [frame for scenario in selected for frame in scenario.frames]
     writer = None
     try:
-        _, writer = await asyncio.wait_for(asyncio.open_connection(HOST, PORT), 5)
+        _, writer = await asyncio.wait_for(open_output(), 5)
         writer.write(('\r\n'.join(frames) + '\r\n').encode('ascii'))
         await asyncio.wait_for(writer.drain(), 5)
     except (OSError, asyncio.TimeoutError) as exc:
-        raise HTTPException(503, f'TCP送信に失敗しました: {str(exc)[:160]}') from exc
+        raise HTTPException(503, f'送信に失敗しました: {str(exc)[:160]}') from exc
     finally:
         if writer is not None:
             writer.close()
@@ -336,7 +414,7 @@ async def send_ais_scenarios(request: AisSuiteRequest):
     sim.lines += len(frames)
     sim.preview = (sim.preview + frames)[-12:]
     return {'sent': len(selected), 'sentences': len(frames),
-            'scenarios': [scenario.id for scenario in selected], 'target': f'{HOST}:{PORT}',
+            'scenarios': [scenario.id for scenario in selected], 'target': output_target(),
             'markers': markers}
 
 app.mount('/static', StaticFiles(directory=Path(__file__).parent/'static'),name='static')
@@ -411,7 +489,7 @@ class RingMotion:
         while self.active:
             writer = None
             try:
-                _, writer = await asyncio.wait_for(asyncio.open_connection(HOST, PORT), 5)
+                _, writer = await asyncio.wait_for(open_output(), 5)
                 self.connected = True
                 self.error = ''
                 previous = time.monotonic()
@@ -457,7 +535,7 @@ async def motion_start(request: AisSuiteRequest):
         raise HTTPException(422, '中心位置を指定してください')
     async with ring_motion.lock:
         await ring_motion.stop()
-        initial = await send_ais_scenarios(request)
+        initial = await _send_ais_scenarios(request)
         ring_motion.configure(request)
         ring_motion.active = True
         ring_motion.task = asyncio.create_task(ring_motion.run())
@@ -469,3 +547,25 @@ async def motion_stop():
     async with ring_motion.lock:
         await ring_motion.stop()
         return ring_motion.status()
+
+
+@app.get('/api/output')
+def get_output():
+    return output_config().model_dump()
+
+@app.post('/api/output')
+async def set_output(config: OutputConfig):
+    global output_override
+    async with ring_motion.lock:
+        # Persist atomically before changing the running destination.
+        try:
+            OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+            temporary = OUTPUT_FILE.with_suffix('.tmp')
+            temporary.write_text(config.model_dump_json())
+            temporary.replace(OUTPUT_FILE)
+        except OSError as exc:
+            raise HTTPException(503, '送信先設定を保存できません') from exc
+        await ring_motion.stop()
+        await sim.stop()
+        output_override = config
+        return {**sim.status(), 'motion': ring_motion.status()}

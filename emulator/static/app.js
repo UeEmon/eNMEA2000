@@ -6,7 +6,7 @@ const types=['rmc','gga','ais1','ais5'];
 const inputForType={rmc:'rmc',gga:'gga',ais1:'ais_type1',ais5:'ais_type5'};
 const ais5Fields=['repeat','ais_version','imo','callsign','shipname','ship_type','to_bow','to_stern','to_port','to_starboard','epfd','month','day','hour','minute','draught','destination','dte'];
 const ais5Text=['callsign','shipname','destination'];
-let configLoaded=false;
+let configLoaded=false, outputLoaded=false;
 let aisScenarios=[];
 let suiteMarkers=[];
 let motionLoaded=false;
@@ -16,7 +16,7 @@ function applyMotion(state){
   motionLoaded=true;
   for(const id of ['suiteLat','suiteLon','suiteSpacing','sendAllScenarios'])e(id).disabled=state.active;
   e('mapMode').querySelector('option[value="suite-center"]').disabled=state.active;
-  e('ringMotionStatus').textContent=(state.active?(state.connected?'周回送信中':'TCP再接続中'):'周回停止中')+
+  e('ringMotionStatus').textContent=(state.active?(state.connected?'周回送信中':'送信先に再接続中'):'周回停止中')+
     (state.markers.length?` · 更新 ${state.interval.toFixed(2)}秒 / ${state.angular_step_deg.toFixed(3)}° · 外周移動 ${(state.movement_nm.at(-1).distance*1852).toFixed(1)}m/更新`:'')+
     (state.error?' · '+state.error:'');
   if(state.active&&mode==='suite-center')setMode('pan');
@@ -41,7 +41,7 @@ async function loadAisScenarios(){try{const data=await api('/api/ais/scenarios')
 }catch(err){e('suiteResult').textContent=err.message}}
 async function sendAisScenarios(ids){const buttons=[e('sendScenario')];buttons.forEach(button=>button.disabled=true);
   try{const result=await api('/api/ais/send',{scenario_ids:ids});
-    e('suiteResult').textContent=`TCP送信完了: ${result.sent}項目 / ${result.sentences}文 → ${result.target}`;refresh()}
+    e('suiteResult').textContent=`送信完了: ${result.sent}項目 / ${result.sentences}文 → ${result.target}`;refresh()}
   catch(err){e('suiteResult').textContent=`送信失敗: ${err.message}`}finally{buttons.forEach(button=>button.disabled=false)}}
 e('aisScenario').onchange=showAisScenario;
 e('sendScenario').onclick=()=>{if(selectedAisScenario())sendAisScenarios([e('aisScenario').value])};
@@ -122,9 +122,9 @@ function showQuickMenu(screen){if(!current||busy||drag)return;
   menu.style.top=Math.max(8,Math.min(canvasRect.top-cardRect.top+screen.y,card.clientHeight-menu.offsetHeight-8))+'px';
   menu.querySelector('button')?.focus();
 }
-function updateStatus(s){current=s;route=s.config.route.waypoints;looping=s.config.route.loop;renderList();
+function updateStatus(s){if(!outputLoaded){e('outputHost').value=s.output.host;e('outputPort').value=s.output.port;e('outputProtocol').value=s.output.protocol;outputLoaded=true}current=s;route=s.config.route.waypoints;looping=s.config.route.loop;renderList();
   if(!configLoaded){for(const key of Object.values(inputForType))e(key).checked=s.config[key];updateTypeTabs();e('mmsi_start').value=s.config.mmsi_start;for(const key of ais5Fields)e('ais5_'+key).value=String(s.config.ais5[key]);configLoaded=true}
-  e('connection').textContent=s.active?(s.connected?'TCP接続中':'再接続中'):'停止中';e('target').textContent=s.target;e('lines').textContent=s.lines;
+  e('connection').textContent=s.active?(s.connected?(s.output.protocol==='udp'?'UDP送信中（受信未確認）':'TCP接続中'):'再接続中'):'停止中';e('target').textContent=s.target;e('lines').textContent=s.lines;
   e('position').textContent=s.position.lat.toFixed(5)+'°, '+s.position.lon.toFixed(5)+'°';e('currentMotion').textContent=s.course.toFixed(1)+'° / '+s.current_speed.toFixed(1)+' kt';
   e('routeProgress').textContent=s.route_done?'到着':route.length?`${Math.min(s.route_index+1,route.length)} / ${route.length}`:'航路なし';
   e('preview').textContent=s.preview.join('\n')||'送信待機中';e('error').textContent=s.error||'';
@@ -173,3 +173,8 @@ e('config').onsubmit=async event=>{event.preventDefault();const data={};for(cons
   data.gps=true;data.ais=true;data.route={waypoints:route,loop:e('loop').checked};busy=true;try{updateStatus(await api('/api/start',data))}catch(err){error(err)}finally{busy=false}};
 e('stop').onclick=async()=>{busy=true;try{await stopAllSending()}catch(err){error(err)}finally{busy=false}};
 initMap();refresh();loadAisScenarios();setInterval(refresh,1000);
+
+e('outputProtocol').onchange=()=>{const port=Number(e('outputPort').value);if(port===10110||port===10111)e('outputPort').value=e('outputProtocol').value==='udp'?10110:10111};
+e('outputConfig').onsubmit=async event=>{event.preventDefault();busy=true;
+  try{const status=await api('/api/output',{host:e('outputHost').value.trim(),port:Number(e('outputPort').value),protocol:e('outputProtocol').value});outputLoaded=false;updateStatus(status);applyMotion(status.motion);e('outputResult').textContent=`保存しました: ${status.target}。全送信を停止しました。送信開始を押してください。`}
+  catch(err){e('outputResult').textContent=err.message}finally{busy=false}};
