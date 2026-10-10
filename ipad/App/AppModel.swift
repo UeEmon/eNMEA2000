@@ -1,4 +1,5 @@
 import Foundation
+import Network
 import SwiftUI
 import NMEACore
 import NMEATransport
@@ -21,6 +22,9 @@ import NMEATransport
  @Published var udpPort = UserDefaults.standard.string(forKey:"udpPort") ?? "10110"
  @Published var tcpPort = UserDefaults.standard.string(forKey:"tcpPort") ?? "10111"
  @Published var focusRequest = 0
+ @Published var localAddresses: [LocalAddress] = []
+ @Published var addressError: String?
+ private var addressMonitor: NWPathMonitor?
  private let queue = DispatchQueue(label:"nmea.processing",qos:.userInitiated)
  private var store: NMEAStore?
  private var parser: NMEAParser?
@@ -29,6 +33,7 @@ import NMEATransport
  private var scheduled = false
  var selectedTrack: Track? { tracks.first { $0.mmsi == selected } }
  init() {
+  beginAddressMonitoring()
   do {
    let directory = try FileManager.default.url(for:.applicationSupportDirectory,in:.userDomainMask,appropriateFor:nil,create:true).appendingPathComponent("eNMEA",isDirectory:true)
    try FileManager.default.createDirectory(at:directory,withIntermediateDirectories:true)
@@ -42,6 +47,19 @@ import NMEATransport
    assets?.start { [weak self] result in Task { @MainActor in switch result { case .success(let url): self?.mapURL = url; case .failure(let e): self?.error = e.localizedDescription } } }
   } catch { self.error = error.localizedDescription }
  }
+ private func beginAddressMonitoring() {
+  let monitor = NWPathMonitor(); addressMonitor = monitor
+  monitor.pathUpdateHandler = { [weak self] _ in Task { @MainActor in self?.refreshAddresses() } }
+  monitor.start(queue:queue)
+  refreshAddresses()
+ }
+ func refreshAddresses() {
+  queue.async { [weak self] in
+   do { let addresses = try LocalAddresses.current(); Task { @MainActor in self?.localAddresses = addresses; self?.addressError = nil } }
+   catch { Task { @MainActor in self?.localAddresses = []; self?.addressError = "IPアドレスを取得できませんでした。更新してください。" } }
+  }
+ }
+ deinit { addressMonitor?.cancel() }
  private func configureWorker() {
   let store = store, parser = parser
   receiver?.onLines = { [weak self] lines,source in
