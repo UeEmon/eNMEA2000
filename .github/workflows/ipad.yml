@@ -1,0 +1,59 @@
+name: iPad standalone
+on:
+  pull_request:
+    paths: ['ipad/**', 'web/package*.json', 'web/symbology.js', '.github/workflows/ipad.yml']
+  push:
+    branches: [main]
+    paths: ['ipad/**', 'web/package*.json', 'web/symbology.js', '.github/workflows/ipad.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Core parser and database tests
+        run: swift test --package-path ipad
+      - name: Prepare offline map assets
+        run: bash ipad/tools/prepare-assets.sh
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate --spec ipad/project.yml
+      - name: Build iPad Simulator app
+        run: xcodebuild -project ipad/eNMEA-iPad.xcodeproj -scheme eNMEA-iPad -destination 'generic/platform=iOS Simulator' -derivedDataPath ipad/DerivedData CODE_SIGNING_ALLOWED=NO build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eNMEA-iPad-Simulator
+          path: ipad/DerivedData/Build/Products/Debug-iphonesimulator/eNMEA-iPad.app
+
+  offline-gis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare offline map assets
+        run: bash ipad/tools/prepare-assets.sh
+      - name: Offline GIS browser test
+        run: |
+          npm ci --prefix browser-tests --ignore-scripts
+          cd browser-tests
+          npx playwright install --with-deps chromium
+          cd ..
+          python3 -m http.server 18082 --bind 127.0.0.1 --directory ipad/App/Web > /tmp/ipad-map-http.log 2>&1 &
+          map_pid=$!
+          trap 'kill "$map_pid"; cat /tmp/ipad-map-http.log' EXIT
+          node ipad/tools/map-smoke.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eNMEA-iPad-Map
+          path: /tmp/enmea-ipad-map.png

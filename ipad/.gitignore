@@ -1,0 +1,9 @@
+.build/
+.swiftpm/
+*.xcodeproj/
+DerivedData/
+App/Info.plist
+App/Web/cesium/
+App/Web/milsymbol.js
+App/Web/symbology.js
+App/Web/licenses/

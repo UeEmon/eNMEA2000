@@ -1,0 +1,50 @@
+name: eNMEA-iPad
+options:
+  bundleIdPrefix: jp.ueemon
+  deploymentTarget:
+    iOS: '17.0'
+packages:
+  NMEACore:
+    path: .
+targets:
+  eNMEA-iPad:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+        excludes: [Web, Info.plist]
+      - path: App/Web
+        type: folder
+        buildPhase: resources
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: eNMEA
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        NSLocalNetworkUsageDescription: 同じLANのNMEA送信機からUDPとTCPでデータを受信します。
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSAllowsArbitraryLoadsInWebContent: true
+        UIFileSharingEnabled: false
+        LSSupportsOpeningDocumentsInPlace: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: jp.ueemon.eNMEA.ipad
+        TARGETED_DEVICE_FAMILY: '2'
+        SWIFT_VERSION: '5.0'
+        GENERATE_INFOPLIST_FILE: NO
+        MARKETING_VERSION: '1.0.0'
+        CURRENT_PROJECT_VERSION: '1'
+        CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - package: NMEACore
+        product: NMEACore
+      - package: NMEACore
+        product: NMEATransport
+schemes:
+  eNMEA-iPad:
+    build:
+      targets:
+        eNMEA-iPad: all
