@@ -46,6 +46,10 @@ def test_selected_suite_udp_datagrams_and_target_switch(destination):
             assert response.status_code == 200
             expected = server.BY_ID['type-5'].frames
             assert [receiver.recv(2048) for _ in expected] == [(line+'\r\n').encode() for line in expected]
+            response = client.post('/api/ais/send', json={'scenario_ids': [s.id for s in server.SCENARIOS]})
+            assert response.status_code == 200
+            expected = [frame for scenario in server.SCENARIOS for frame in scenario.frames]
+            assert [receiver.recv(2048) for _ in expected] == [(line+'\r\n').encode() for line in expected]
             # Saving a new destination stops both continuous producers, including live UDP output.
             client.post('/api/start', json={'interval': .2})
             receiver.recv(2048)
