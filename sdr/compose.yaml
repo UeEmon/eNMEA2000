@@ -1,0 +1,61 @@
+name: nmea-sdr
+services:
+  ais-receiver:
+    build:
+      context: .
+      target: receiver
+    init: true
+    restart: unless-stopped
+    volumes:
+      - ./iq:/iq:ro
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8001/health',timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '3'
+  nmea-router:
+    build:
+      context: .
+      target: router
+    init: true
+    restart: unless-stopped
+    environment:
+      SDR_TOKEN: ${SDR_TOKEN:?Run python3 sdr/setup.py first}
+    volumes:
+      - sdr-data:/data
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      ais-receiver:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8002/health',timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    logging: *logging
+  receiver-web:
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    ports:
+      - '${SDR_BIND:-127.0.0.1}:${SDR_WEB_PORT:-18082}:80'
+    depends_on:
+      nmea-router:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1/health]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    logging: *logging
+volumes:
+  sdr-data:

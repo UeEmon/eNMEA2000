@@ -1,0 +1,8 @@
+# Linux Docker Engine only. Root is limited to the receiver container for USB access.
+services:
+  ais-receiver:
+    user: '0:0'
+    device_cgroup_rules:
+      - 'c 189:* rmw'
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb

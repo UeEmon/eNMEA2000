@@ -240,3 +240,7 @@ AIS受信船舶は識別不明の汎用水上目標、自船のGPS位置は友�
 ## iPad単体アプリ
 
 UDP/TCP受信、ファイル解析、端末内SQLite保存、オフラインCesium、監視アラートを備えるSwift版です。Macでのビルド・インストールは [ipad/README.md](ipad/README.md) を参照してください。
+
+## SDRによるAIS受信
+
+[SDR受信部のDocker構築・接続手順](sdr/README.md)。Mac / Windows / Linux対応の独立環境で、管理画面は `http://localhost:18082`、コンテナ内Webは80です。
