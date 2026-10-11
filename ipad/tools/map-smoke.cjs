@@ -10,6 +10,25 @@ const {chromium}=require('../../browser-tests/node_modules/playwright');
   await page.addInitScript(()=>{window.messages=[];window.webkit={messageHandlers:{nmea:{postMessage:body=>window.messages.push(body)}}};});
   await page.goto('http://127.0.0.1:18082/index.html',{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>typeof window.renderTracks==='function',{},{timeout:60000}).catch(e=>{throw Error(e.message+' '+JSON.stringify({errors,external}));});
+  const waitForOwnCenter=async()=>{
+   try {
+    await page.waitForFunction(()=>{
+     const own=viewer.entities.getById('__own__');
+     if(!own||viewer.trackedEntity!==own)return false;
+     const position=own.position.getValue(viewer.clock.currentTime);
+     const point=position&&Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,position);
+     return point&&Math.abs(point.x-viewer.canvas.clientWidth/2)<3&&Math.abs(point.y-viewer.canvas.clientHeight/2)<3;
+    },null,{timeout:15000});
+   } catch(error) {
+    const state=await page.evaluate(()=>{
+     const own=viewer.entities.getById('__own__'),position=own?.position.getValue(viewer.clock.currentTime);
+     const point=position&&Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,position);
+     return {tracked:viewer.trackedEntity?.id,selected:viewer.selectedEntity?.id,x:point?.x,y:point?.y,width:viewer.canvas.clientWidth,height:viewer.canvas.clientHeight};
+    });
+    await page.screenshot({path:'/tmp/enmea-ipad-map.png'});
+    throw Error('Own position did not reach the center: '+JSON.stringify(state),{cause:error});
+   }
+  };
   const tracks=[{mmsi:'123456789',lat:35.5,lon:139.7,fields:{shipname:'TEST',own:'false'},watched:true,trail:[[139.69,35.49],[139.7,35.5]]}];
   for(const standard of ['2525','APP6']) {
    await page.evaluate(({tracks,standard})=>{window.renderTracks(tracks,{selected:'123456789',standard});window.focusMmsi('123456789');},{tracks,standard});
@@ -24,16 +43,17 @@ const {chromium}=require('../../browser-tests/node_modules/playwright');
   // Own position remains at the GIS center even when selecting/focusing another target.
   for(const standard of ['2525','APP6']) for(const ownPlatform of ['ship','aircraft']) {
    await page.evaluate(({tracks,standard,ownPlatform})=>window.renderTracks(tracks,{selected:'123456789',standard,ownPlatform,followOwn:true,own:{lat:35.4,lon:139.6,kind:'VDO'}}),{tracks,standard,ownPlatform});
-   await page.waitForTimeout(500);
+   await waitForOwnCenter();
    const state=await page.evaluate(()=>{
     const own=viewer.entities.getById('__own__'),p=Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,own.position.getValue(viewer.clock.currentTime));
-    return {tracked:viewer.trackedEntity?.id,selected:viewer.selectedEntity?.id,x:p.x,y:p.y,w:viewer.canvas.clientWidth,h:viewer.canvas.clientHeight,code:NmeaSymbols.sidc(true,false,'aircraft'),image:own.billboard.image.getValue().toDataURL()};
+    return {tracked:viewer.trackedEntity?.id,selected:viewer.selectedEntity?.id,x:p.x,y:p.y,w:viewer.canvas.clientWidth,h:viewer.canvas.clientHeight,code:NmeaSymbols.sidc(true,false,'aircraft')};
    });
    if(state.tracked!=='__own__'||state.selected!=='123456789'||Math.abs(state.x-state.w/2)>3||Math.abs(state.y-state.h/2)>3)throw Error('Own center: '+JSON.stringify(state));
    await page.evaluate(()=>window.focusMmsi('123456789'));
    if(await page.evaluate(()=>viewer.trackedEntity?.id)!=='__own__')throw Error('Target selection lost own tracking');
+   await waitForOwnCenter();
    await page.evaluate(({tracks,standard,ownPlatform})=>window.renderTracks(tracks,{selected:'123456789',standard,ownPlatform,followOwn:true,own:{lat:35.45,lon:139.65,kind:'RMC'}}),{tracks,standard,ownPlatform});
-   await page.waitForTimeout(500);
+   await waitForOwnCenter();
    const centered=await page.evaluate(()=>{const own=viewer.entities.getById('__own__'),p=Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,own.position.getValue(viewer.clock.currentTime));return Math.abs(p.x-viewer.canvas.clientWidth/2)<3&&Math.abs(p.y-viewer.canvas.clientHeight/2)<3});
    if(!centered)throw Error('Updated own position not centered');
   }
