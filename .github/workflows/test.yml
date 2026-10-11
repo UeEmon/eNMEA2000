@@ -36,6 +36,13 @@ jobs:
       - run: node browser-tests/emulator-ais-smoke.js
       - run: node browser-tests/data-delete-smoke.js
       - run: node browser-tests/emulator-output-smoke.js
+      - run: python sdr/setup.py
+      - run: docker compose -f sdr/compose.yaml up -d --build --wait
+      - run: python sdr/main-smoke.py
+      - if: always()
+        run: docker compose -f sdr/compose.yaml logs --tail=60
+      - if: always()
+        run: docker compose -f sdr/compose.yaml down
       - if: always()
         run: docker compose logs --tail=100
       - if: always()

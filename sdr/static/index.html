@@ -1,0 +1,15 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AIS SDR受信管理</title><link rel="stylesheet" href="style.css">
+<header><h1>AIS SDR受信管理</h1><p>AIS A 161.975 MHz / AIS B 162.025 MHz</p></header>
+<main><section><form id="login"><label>管理トークン（sdr/.env の SDR_TOKEN）<input id="token" type="password" autocomplete="current-password" required></label><button>接続</button></form></section><p id="notice" role="status"></p>
+<div id="controls" hidden><section><h2>受信操作</h2><div class="buttons"><button id="start">受信開始</button><button id="stop" class="danger">受信停止</button><button id="reconnect">再接続</button></div><p>保存すると受信を停止します。設定後に「受信開始」を押してください。</p><p>受信プロセスの稼働と、船舶からのメッセージ受信は別に表示します。</p><div id="summary"></div></section>
+<form id="settings"><section><h2>入力設定</h2><div class="grid">
+<label>入力方式<select id="kind"><option value="rtltcp">RTL-TCP（Mac / Windows / Linux）</option><option value="spyserver">SpyServer</option><option value="usb">RTL-SDR USB（Linux）</option><option value="file">I/Qファイル</option></select></label>
+<label>入力ホスト<input id="host" maxlength="253" required></label><label>入力ポート<input id="port" type="number" min="1" max="65535" required></label>
+<label>USBシリアル番号（空欄＝先頭デバイス）<input id="serial" maxlength="64"></label>
+<label>ゲイン（auto または 0～50 dB）<input id="gain" required></label><label>周波数補正 PPM<input id="ppm" type="number" min="-150" max="150" required></label>
+<label>サンプルレート Hz<input id="sample_rate" type="number" min="96000" max="10000000" required></label>
+<label>I/Qファイル（sdr/iq に配置）<select id="file"><option value="">選択してください</option></select></label><label>I/Q形式<select id="format"><option>CU8</option><option>CS8</option><option>CS16</option><option>CF32</option></select></label>
+<label>受信ログ保存上限 MB<input id="log_mb" type="number" min="1" max="1000" required></label></div>
+<p>Mac・WindowsのUSB受信機は、ホストまたは別端末のRTL-TCP / SpyServerを経由します。I/Qファイルは中心周波数162 MHzの記録を使用します。</p></section>
+<section><h2>配信先</h2><p>本体・iPadの待受IPとポートを指定します。TCPは10111、UDPは10110が標準です。</p><div id="destinations"></div><button id="add" type="button">配信先を追加</button></section><button type="submit">設定を保存</button></form>
+<section><h2>接続状況</h2><div id="outputs"></div><details><summary>受信エンジンの診断ログ</summary><pre id="diagnostics"></pre></details></section><section><h2>NMEAログ</h2><button id="logs">一覧を更新</button><div id="downloads"></div><p>切断中のデータはログに保存し、再接続時に古い位置情報を再送しません。UDPの送信数は相手の受信保証ではありません。</p></section></div></main><script src="app.js"></script></html>
