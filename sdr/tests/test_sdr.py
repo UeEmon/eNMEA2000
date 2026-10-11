@@ -82,4 +82,45 @@ class Tests(unittest.TestCase):
                 self.assertEqual(len(list(Path(td).glob('received.nmea*'))),4)
             finally:router.close()
 
+
+    def test_engine_retries_and_stop_kills_process(self):
+        from engine import Engine
+        from unittest.mock import patch
+        import subprocess
+        with patch('engine.command', return_value=[sys.executable,'-c','import sys;sys.stderr.write("input disconnected\\n");sys.exit(1)']):
+            engine=Engine()
+            try:
+                engine.start(validate(DEFAULT))
+                wait(lambda:engine.restarts>=1)
+                self.assertEqual(engine.status()['state'],'retrying')
+                self.assertIn('input disconnected',engine.status()['diagnostics'])
+            finally:engine.stop()
+            self.assertEqual(engine.state,'stopped')
+        with patch('engine.command', return_value=[sys.executable,'-c','import time;time.sleep(60)']):
+            engine=Engine()
+            try:
+                engine.start(validate(DEFAULT));wait(lambda:engine.state=='running')
+                engine.stop();self.assertIsNotNone(engine.process.poll())
+            finally:engine.stop()
+
+    def test_all_types_and_variants_are_forwardable(self):
+        from fixtures import radio_frames, SCENARIOS
+        self.assertEqual({s.message_type for s in SCENARIOS},set(range(29)))
+        frames=radio_frames()
+        self.assertEqual(len(frames),45)
+        for frame in frames:
+            self.assertEqual(sentence(frame),frame+b'\r\n')
+
+    def test_log_cap_reduction(self):
+        with tempfile.TemporaryDirectory() as td:
+            router=Router(td)
+            try:
+                c=validate(DEFAULT);c['destinations']=[];router.configure(c)
+                router.ingest(LINE*25000)
+                c['log_mb']=1;router.configure(c)
+                self.assertLessEqual(sum(p.stat().st_size for p in Path(td).glob('received.nmea*')),1024*1024)
+                router.ingest(LINE)
+                self.assertTrue(Path(td,'received.nmea').read_bytes().endswith(LINE))
+            finally:router.close()
+
 if __name__=='__main__':unittest.main()

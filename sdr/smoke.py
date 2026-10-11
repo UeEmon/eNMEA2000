@@ -1,5 +1,6 @@
 """Docker integration: HTTP auth, engine file lifecycle, NMEA TCP/UDP fan-out."""
 import json
+import sys
 import socket
 import subprocess
 import threading
@@ -57,8 +58,10 @@ def main():
     try:
         config=json.loads(json.dumps(original));config['destinations']=[{'enabled':True,'protocol':p,'host':'host.docker.internal','port':port} for p,port in [('tcp',10111),('udp',10110)]]
         api('config',config);wait(lambda:all(d['connected'] for d in api('status')['destinations']))
-        fixture=(ROOT.parent/'emulator/ais-all-types.log').read_bytes()
-        lines=[l for l in fixture.splitlines() if l.startswith(b'!AIVDM')]
+        sys.path.insert(0,str(ROOT/'tests'))
+        from fixtures import radio_frames
+        lines=radio_frames()
+        fixture=b'\r\n'.join(lines)+b'\r\n'
         # Internal ingest is intentionally not published to host/LAN.
         code='import socket,sys;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.sendto(sys.stdin.buffer.read(),("nmea-router",10112))'
         subprocess.run(['docker','compose','-f',str(ROOT/'compose.yaml'),'exec','-T','ais-receiver','python','-c',code],input=fixture,check=True)
