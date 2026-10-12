@@ -48,13 +48,13 @@ macOS／Linux（WindowsではWSLのBashとDocker Desktop連携を使用）で、
 ```bash
 git clone https://github.com/UeEmon/eNMEA2000.git
 cd eNMEA2000
-bash start-all.sh
+bash Loop-Back.sh
 ```
 
-既に取得済みなら、リポジトリ内で `git pull --ff-only` の後に `bash start-all.sh` を実行します。
+既に取得済みなら、リポジトリ内で `git pull --ff-only` の後に `bash Loop-Back.sh` を実行します。
 ホストへのPython・Node.jsのインストールは不要です。初回はビルドに時間がかかります。
 本体（DBを含む）、NMEAエミュレータ、SDR受信部、SDR送信模擬部の4環境を起動し、起動完了を待ちます。
-不足する `.env`、`sdr/.env`、`sdr-tx/.env` だけを生成し、既存設定・保存データは保持します。再実行も可能です。
+不足する `.env`、`sdr/.env`、`sdr-tx/.env` だけを生成し、既存の秘密情報・保存データは保持します。再実行も可能です。
 
 | 環境 | 既定のWeb URL | ログイン用トークン |
 |---|---|---|
@@ -63,7 +63,18 @@ bash start-all.sh
 | SDR受信部 | http://localhost:18082 | `sdr/.env` の `SDR_TOKEN` |
 | SDR送信模擬部 | http://localhost:18083 | `sdr-tx/.env` の `SDR_TX_TOKEN` |
 
-受信・変調・試験データ送信は各Web画面で開始してください。出力先の保存設定は変更しません。
+起動後、次の経路を自動設定し、本体の受信、SDR受信、変調を開始します。
+
+`NMEAエミュレータ → TCP:10113 → SDR送信模擬部 → RTL-TCP:1235 → SDR受信部 → TCP:10111 → 本体`
+
+NMEAエミュレータのWeb画面でメッセージ送信を開始すると、この経路で本体に届きます。
+起動スクリプトは試験メッセージを生成・送信しません。送信模擬部の出力はソフトウェアI/Qです。
+各連接先は `host.docker.internal` を使用します。SDR受信の入力はRTL-TCP、288000サンプル/秒、PPM補正0、自動ゲインに設定します。
+変調は振幅0.65、雑音0、周波数ずれ0、CRC破損なしに設定します。
+エミュレータの出力先、SDR受信の入力・転送先、変調設定は保存され、一括起動のたびにこの経路へ設定し直します。
+その他の受信ログ設定や保存データ、秘密情報は保持します。
+SDR受信部から本体へのTCP接続と、送信模擬部へのI/Q接続を確認できない場合、シェルは失敗として終了します。
+SDRデータの公開バインドを変更した場合は、コンテナから公開ポート1235、10113へ接続できる設定にしてください。
 SDR模擬試験の接続設定は [sdr-tx/README.md](sdr-tx/README.md) を参照してください。
 LinuxのUSB直結用 `sdr/compose.usb.yaml` はこのシェルでは適用しません。通常のネットワーク入力構成で起動します。
 失敗時は処理中の環境を表示して終了し、それまでに起動したコンテナは保持します。

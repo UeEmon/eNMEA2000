@@ -2,9 +2,9 @@ name: SDR modulation
 on:
   push:
     branches: [main, codex/**]
-    paths: ['start-all.sh', 'scripts/setup.py', 'sdr/setup.py', 'sdr-tx/**', '.github/workflows/sdr-tx.yml']
+    paths: ['Loop-Back.sh', 'scripts/setup.py', 'scripts/configure-sdr-chain.py', 'sdr/setup.py', 'sdr-tx/**', '.github/workflows/sdr-tx.yml']
   pull_request:
-    paths: ['start-all.sh', 'scripts/setup.py', 'sdr/setup.py', 'sdr-tx/**', '.github/workflows/sdr-tx.yml']
+    paths: ['Loop-Back.sh', 'scripts/setup.py', 'scripts/configure-sdr-chain.py', 'sdr/setup.py', 'sdr-tx/**', '.github/workflows/sdr-tx.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,9 +22,9 @@ jobs:
         with: {python-version: '3.12'}
       - run: pip install numpy==2.3.5
       - run: python -m unittest discover -s sdr-tx/tests -v
-      - run: bash start-all.sh
+      - run: bash Loop-Back.sh
       - run: python sdr-tx/roundtrip.py
-      - run: python sdr-tx/smoke.py
+      - run: python sdr-tx/smoke.py --launcher
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: npm ci --prefix browser-tests

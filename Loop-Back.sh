@@ -36,10 +36,18 @@ for project in . emulator sdr sdr-tx; do
   compose_in "$project" up -d --build --wait
 done
 
+phase='SDR連接設定'
+compose_in . exec -T app python - main < scripts/configure-sdr-chain.py
+compose_in sdr-tx exec -T modulator python - transmitter-config < scripts/configure-sdr-chain.py
+compose_in emulator exec -T emulator python - emulator < scripts/configure-sdr-chain.py
+compose_in sdr exec -T nmea-router python - receiver < scripts/configure-sdr-chain.py
+compose_in sdr-tx exec -T modulator python - transmitter-start < scripts/configure-sdr-chain.py
+
 printf '\n全環境の起動が完了しました。既定の接続先:\n'
 printf '  本体             http://localhost:18081  (.env の APP_TOKEN)\n'
 printf '  NMEAエミュレータ http://localhost:8090\n'
 printf '  SDR受信部        http://localhost:18082  (sdr/.env の SDR_TOKEN)\n'
 printf '  SDR送信模擬部    http://localhost:18083  (sdr-tx/.env の SDR_TX_TOKEN)\n'
 printf 'ポートを変更済みの場合は各Compose設定の公開ポートを使用してください。\n'
-printf '受信・変調・試験データ送信は各Web画面で開始してください。\n'
+printf '連接: NMEAエミュレータ → TCP:10113 → SDR送信模擬部 → RTL-TCP:1235 → SDR受信部 → TCP:10111 → 本体\n'
+printf 'SDR受信と変調は開始済みです。NMEAエミュレータのWeb画面でデータ送信を開始してください。\n'
