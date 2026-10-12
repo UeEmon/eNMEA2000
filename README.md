@@ -5,6 +5,8 @@ UDP/TCP受信・ファイル解析・データ保存・WebSocketライブ表示�
 GIS表示にはCesiumJSを使用し、配布イメージに組み込んだNatural Earthの背景図を表示します。
 画面は日本語で、PC／スマートフォンの両方に対応します。
 
+開発・運用を引き継ぐ担当者は [開発・運用引き継ぎ書](docs/HANDOVER.md) を参照してください。
+
 ## 1. Docker Desktopで起動
 
 前提：Docker Desktopを起動し、Linuxコンテナを使用してください。
