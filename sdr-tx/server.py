@@ -34,6 +34,8 @@ class State:
         with self.lock:self.enabled=False;self.epoch+=1;self.clear()
     def ingest(self,raw,assembler):
         with self.lock:
+            if getattr(assembler,'epoch',None)!=self.epoch:
+                assembler.parts.clear();assembler.epoch=self.epoch
             self.counts['sentences']+=1;self.last_nmea=time.time()
             try:packet=assembler.feed(raw)
             except (ValueError,UnicodeError) as exc:self.counts['invalid']+=1;self.error=str(exc);return

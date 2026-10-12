@@ -36,4 +36,17 @@ class Tests(unittest.TestCase):
     def test_determinism(self):
         text='\n'.join(next(s for s in SCENARIOS if s.message_type==5).frames)
         a,n=render(text,{'noise':.01});b,_=render(text,{'noise':.01});self.assertEqual(a,b);self.assertEqual(n,1)
+    def test_stop_clears_queue_and_incomplete_fragments(self):
+        import importlib.util,tempfile
+        spec=importlib.util.spec_from_file_location('sdr_tx_service',Path(__file__).resolve().parents[1]/'server.py')
+        service=importlib.util.module_from_spec(spec);spec.loader.exec_module(service)
+        with tempfile.TemporaryDirectory() as td:
+            service.DATA=Path(td);state=service.State();state.client='test';state.enabled=True
+            a=Assembler();frames=next(s for s in SCENARIOS if s.message_type==5).frames
+            state.ingest(frames[0],a);state.stop();state.enabled=True
+            state.ingest(frames[1],a)
+            self.assertEqual(state.queue.qsize(),0);self.assertEqual(state.counts['invalid'],1)
+            for frame in frames:state.ingest(frame,a)
+            self.assertEqual(state.queue.qsize(),1);state.stop();self.assertEqual(state.queue.qsize(),0)
+
 if __name__=='__main__':unittest.main()
