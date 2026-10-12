@@ -2,6 +2,7 @@
 import http.cookiejar
 import json
 import time
+import sys
 import urllib.request
 import urllib.error
 from pathlib import Path
@@ -29,6 +30,18 @@ def main():
     try:request(18083,'/api/config');raise AssertionError('Anonymous management allowed')
     except urllib.error.HTTPError as e:assert e.code==401
     app('login',{'token':secret(ROOT/'.env','APP_TOKEN')})
+    if '--launcher' in sys.argv:
+        # Verify the launcher itself configured the route before this test changes it.
+        output=emu('output');output=output.get('output',output)
+        assert output['protocol']=='tcp' and output['host']=='host.docker.internal' and output['port']==10113
+        config=rx('config')
+        assert config['input']['kind']=='rtltcp' and config['input']['port']==1235 and config['input']['sample_rate']==288000
+        assert config['destinations']==[{'enabled':True,'protocol':'tcp','host':'host.docker.internal','port':10111}]
+        assert tx('status')['enabled'] and tx('status')['client'] is not None
+        before=max([e['id'] for e in app('events?limit=100')],default=0)
+        emu('ais/send',{'scenario_ids':['type-5']})
+        wait(lambda:any(e.get('ais_type')==5 and e['source'].startswith('tcp:') for e in app(f'events?limit=100&after={before}')))
+        print('PASS: launcher configured and started the full SDR chain; Type 5 reached main without reconfiguration')
     enabled=app('stats')['udp_enabled'];old_rx=rx('config');old_tx=tx('config');old_output=emu('output')
     # /api/output GET returns the saved configuration under output in current emulator.
     if 'output' in old_output:old_output=old_output['output']
