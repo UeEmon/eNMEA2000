@@ -3,3 +3,4 @@ pytest
 httpx
 cfn-lint
 boto3
+numpy==2.3.5

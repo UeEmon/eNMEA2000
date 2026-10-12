@@ -1,0 +1,48 @@
+name: SDR modulation
+on:
+  push:
+    branches: [main, codex/**]
+    paths: ['sdr-tx/**', '.github/workflows/sdr-tx.yml']
+  pull_request:
+    paths: ['sdr-tx/**', '.github/workflows/sdr-tx.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  modulation:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install numpy==2.3.5
+      - run: python -m unittest discover -s sdr-tx/tests -v
+      - run: python sdr/setup.py && python sdr-tx/setup.py && python scripts/setup.py
+      - run: docker compose --env-file sdr/.env -f sdr/compose.yaml up -d --build --wait
+      - run: docker compose --env-file sdr-tx/.env -f sdr-tx/compose.yaml up -d --build --wait
+      - run: python sdr-tx/roundtrip.py
+      - run: docker compose up -d --build --wait
+      - run: docker compose -f emulator/compose.yaml up -d --build --wait
+      - run: python sdr-tx/smoke.py
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm ci --prefix browser-tests
+      - run: npx --prefix browser-tests playwright install --with-deps chromium
+      - run: node sdr-tx/browser-smoke.cjs
+      - if: always()
+        run: docker compose --env-file sdr-tx/.env -f sdr-tx/compose.yaml logs --tail=60
+      - if: always()
+        run: docker compose --env-file sdr/.env -f sdr/compose.yaml logs --tail=60
+      - if: always()
+        run: docker compose --env-file sdr-tx/.env -f sdr-tx/compose.yaml down
+      - if: always()
+        run: docker compose --env-file sdr/.env -f sdr/compose.yaml down
+      - if: always()
+        run: docker compose -f emulator/compose.yaml down
+      - if: always()
+        run: docker compose down
