@@ -41,6 +41,43 @@ AWSではHTTPSを使用します。
 
 本体Webの公開ポートはホスト側18081番／コンテナ内80番です。80番はコンテナのネットワーク名前空間で非rootユーザーが待ち受けられるよう設定しています。
 
+### 本体・エミュレータ・SDRを一括起動
+
+macOS／Linux（WindowsではWSLのBashとDocker Desktop連携を使用）で、Dockerを起動してから実行します。
+
+```bash
+git clone https://github.com/UeEmon/eNMEA2000.git
+cd eNMEA2000
+bash start-all.sh
+```
+
+既に取得済みなら、リポジトリ内で `git pull --ff-only` の後に `bash start-all.sh` を実行します。
+ホストへのPython・Node.jsのインストールは不要です。初回はビルドに時間がかかります。
+本体（DBを含む）、NMEAエミュレータ、SDR受信部、SDR送信模擬部の4環境を起動し、起動完了を待ちます。
+不足する `.env`、`sdr/.env`、`sdr-tx/.env` だけを生成し、既存設定・保存データは保持します。再実行も可能です。
+
+| 環境 | 既定のWeb URL | ログイン用トークン |
+|---|---|---|
+| 本体 | http://localhost:18081 | `.env` の `APP_TOKEN` |
+| NMEAエミュレータ | http://localhost:8090 | 不要 |
+| SDR受信部 | http://localhost:18082 | `sdr/.env` の `SDR_TOKEN` |
+| SDR送信模擬部 | http://localhost:18083 | `sdr-tx/.env` の `SDR_TX_TOKEN` |
+
+受信・変調・試験データ送信は各Web画面で開始してください。出力先の保存設定は変更しません。
+SDR模擬試験の接続設定は [sdr-tx/README.md](sdr-tx/README.md) を参照してください。
+LinuxのUSB直結用 `sdr/compose.usb.yaml` はこのシェルでは適用しません。通常のネットワーク入力構成で起動します。
+失敗時は処理中の環境を表示して終了し、それまでに起動したコンテナは保持します。
+該当ディレクトリで `docker compose logs --tail=100` を確認して原因を解消後、再実行してください。
+
+全環境を停止してコンテナを削除する場合（保存データは保持）:
+
+```bash
+docker compose -f sdr-tx/compose.yaml --env-file sdr-tx/.env down
+docker compose -f sdr/compose.yaml --env-file sdr/.env down
+docker compose -f emulator/compose.yaml down
+docker compose down
+```
+
 ## 2. 動作確認
 
 コンテナ内から受信・保存・ファイル解析を確認：
