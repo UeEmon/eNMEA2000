@@ -9,3 +9,7 @@ aws
 web/node_modules
 app/static/cesium
 *.zip
+
+sdr/.env
+sdr-tx/.env
+sdr-tx/*.cu8

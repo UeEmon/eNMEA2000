@@ -244,3 +244,7 @@ UDP/TCP受信、ファイル解析、端末内SQLite保存、オフラインCesi
 ## SDRによるAIS受信
 
 [SDR受信部のDocker構築・接続手順](sdr/README.md)。Mac / Windows / Linux対応の独立環境で、管理画面は `http://localhost:18082`、コンテナ内Webは80です。
+
+## SDR受信部の変調・復調試験
+
+[SDR送信エミュレータの構築・接続手順](sdr-tx/README.md)。既存エミュレータからのAISをGMSK変調し、I/QストリームまたはファイルでSDR受信部を試験できます。管理画面は `http://localhost:18083` です。
