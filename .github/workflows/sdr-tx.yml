@@ -2,9 +2,9 @@ name: SDR modulation
 on:
   push:
     branches: [main, codex/**]
-    paths: ['sdr-tx/**', '.github/workflows/sdr-tx.yml']
+    paths: ['start-all.sh', 'scripts/setup.py', 'sdr/setup.py', 'sdr-tx/**', '.github/workflows/sdr-tx.yml']
   pull_request:
-    paths: ['sdr-tx/**', '.github/workflows/sdr-tx.yml']
+    paths: ['start-all.sh', 'scripts/setup.py', 'sdr/setup.py', 'sdr-tx/**', '.github/workflows/sdr-tx.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,12 +22,8 @@ jobs:
         with: {python-version: '3.12'}
       - run: pip install numpy==2.3.5
       - run: python -m unittest discover -s sdr-tx/tests -v
-      - run: python sdr/setup.py && python sdr-tx/setup.py && python scripts/setup.py
-      - run: docker compose --env-file sdr/.env -f sdr/compose.yaml up -d --build --wait
-      - run: docker compose --env-file sdr-tx/.env -f sdr-tx/compose.yaml up -d --build --wait
+      - run: bash start-all.sh
       - run: python sdr-tx/roundtrip.py
-      - run: docker compose up -d --build --wait
-      - run: docker compose -f emulator/compose.yaml up -d --build --wait
       - run: python sdr-tx/smoke.py
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
