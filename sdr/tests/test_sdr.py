@@ -36,6 +36,9 @@ class Tests(unittest.TestCase):
 
     def test_command_inputs_and_path_isolation(self):
         c=validate(DEFAULT);self.assertIn('-t',command(c))
+        for kind in ('rtltcp','usb','spyserver'):
+            c['input']['kind']=kind;args=command(c);i=args.index('-X');self.assertEqual(args[i+1],'off')
+        c=validate(DEFAULT)
         c['input']['kind']='usb';self.assertIn('-d:0',command(c))
         c['input']['kind']='spyserver';self.assertIn('-y',command(c))
         with tempfile.TemporaryDirectory() as td:
