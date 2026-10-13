@@ -426,3 +426,17 @@ def test_delete_saved_database_data_requires_confirmation_and_pauses_ingest(clie
         if c.get('/api/stats').json()['total']==1:break
         time.sleep(.01)
     assert c.get('/api/stats').json()['total']==1
+
+
+def test_padsb_over_tcp_and_icao_filter(client):
+    c,main,_=client;login(c)
+    jal='$'+'PADSB,86D3A1,JAL123,35.549400,139.779800,12500,420.0,287.0,-1472,3'
+    jal+='*'+checksum(jal[1:])
+    with socket.create_connection(('127.0.0.1',main.TCP_PORT)) as sock:
+        sock.sendall((jal+'\r\n').encode())
+        for _ in range(200):
+            rows=c.get('/api/events?icao=86D3A1').json()
+            if rows:break
+            time.sleep(.01)
+    assert rows and rows[0]['icao']=='86D3A1' and rows[0]['source'].startswith('tcp:')
+    assert c.get('/api/events?icao=86d3a1').status_code==422

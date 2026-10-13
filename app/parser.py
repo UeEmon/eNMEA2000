@@ -44,6 +44,15 @@ AIS_TYPE_NAMES = {
 }
 AIS_SUPPORTED_TYPES = frozenset(AIS_TYPE_NAMES)
 
+# Proprietary sentence sent by eADS-B2000 (github.com/UeEmon/eADS-B2000):
+# $PADSB,icao,callsign,lat,lon,altitude_ft,ground_speed_kt,track_deg,vertical_rate_fpm,category*hh
+# lat/lon are signed decimal degrees; empty fields are unknown.
+ADSB_FIELDS = ('icao', 'callsign', 'lat', 'lon', 'altitude_ft', 'ground_speed_kt', 'track_deg',
+               'vertical_rate_fpm', 'category')
+ADSB_RANGES = (('lat', -90, 90), ('lon', -180, 180), ('altitude_ft', -1000, 60000),
+               ('ground_speed_kt', 0, 4000), ('track_deg', 0, 360), ('vertical_rate_fpm', -40000, 40000),
+               ('category', 0, 7))
+
 def utcnow():
     return datetime.now(timezone.utc).isoformat()
 
@@ -156,7 +165,7 @@ class Decoder:
         self.expire()
         row = dict(received_at=received_at or utcnow(), source=source, raw=text[:8192],
                    sentence_type='UNKNOWN', status='error', checksum_valid=None, decoded={},
-                   latitude=None, longitude=None, mmsi=None, event_time=None)
+                   latitude=None, longitude=None, mmsi=None, icao=None, event_time=None)
         try:
             match = SENTENCE.search(text)
             if not match: raise ValueError('NMEAセンテンスがありません')
@@ -169,7 +178,9 @@ class Decoder:
             row['checksum_valid'] = checksum(body[1:]) == expected.upper()
             if not row['checksum_valid']: raise ValueError('チェックサム不一致')
             sentence = body + '*' + expected
-            if body[3:6] in ('VDM', 'VDO'):
+            if body[1:6] == 'PADSB':
+                self._adsb(body, row)
+            elif body[3:6] in ('VDM', 'VDO'):
                 self._ais(sentence, source, row)
             else:
                 try:
@@ -196,6 +207,23 @@ class Decoder:
     def _position(row, lat, lon):
         if -90 <= lat <= 90 and -180 <= lon <= 180:
             row.update(latitude=lat, longitude=lon)
+
+    def _adsb(self, body, row):
+        row['sentence_type'] = 'ADSB'
+        fields = body.split(',')
+        if len(fields) != len(ADSB_FIELDS) + 1: raise ValueError('PADSBフィールド数不正')
+        values = dict(zip(ADSB_FIELDS, fields[1:]))
+        if not re.fullmatch(r'[0-9A-Fa-f]{6}', values['icao']): raise ValueError('ICAOアドレス不正')
+        if not re.fullmatch(r'[A-Z0-9 ]{0,8}', values['callsign']): raise ValueError('呼出符号不正')
+        data = {'icao': values['icao'].upper(), 'callsign': values['callsign'].strip() or None}
+        for key, low, high in ADSB_RANGES:
+            text = values[key]
+            if text == '': data[key] = None; continue
+            number = float(text)
+            if not (math.isfinite(number) and low <= number <= high): raise ValueError(f'{key}範囲外')
+            data[key] = int(number) if key in ('altitude_ft', 'vertical_rate_fpm', 'category') else number
+        row.update(status='ok', decoded=data, icao=data['icao'])
+        if data['lat'] is not None and data['lon'] is not None: self._position(row, data['lat'], data['lon'])
 
     def _ais(self, sentence, source, row):
         fields = sentence.split('*')[0].split(',')

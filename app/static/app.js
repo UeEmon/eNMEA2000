@@ -69,6 +69,9 @@ function merge(data){retainTrackRows(data);const byId=new Map(rows.map(r=>[r.id,
   rows=[...byId.values()].sort((a,b)=>b.id-a.id).slice(0,500);render()}
 function filtered(){const search=$('search').value.toLowerCase(), source=$('source').value;return rows.filter(r=>(source==='all'||r.source.startsWith(source+':'))&&(!search||JSON.stringify(r).toLowerCase().includes(search)))}
 function render(){if(paused)return;const view=filtered(),body=$('rows');body.replaceChildren();for(const row of view){const tr=document.createElement('tr');tr.dataset.id=row.id;const type=row.ais_type??row.decoded?.msg_type;const kind=type!==undefined?'AIS Type '+type:row.sentence_type;const input=row.source.startsWith('udp:')?'UDP':row.source.startsWith('tcp:')?'TCP':row.filename||'FILE';const values=[new Date(row.received_at).toLocaleTimeString(),input,kind,row.status,row.raw];for(let i=0;i<values.length;i++){const td=document.createElement('td');if(i===3){const badge=document.createElement('span');badge.className='status '+row.status;badge.textContent=({ok:'正常',error:'エラー',pending:'断片待機',unsupported:'未対応'})[row.status]||row.status;td.append(badge)}else{td.textContent=values[i];td.title=String(values[i])}tr.append(td)}tr.onclick=()=>$('detail').textContent=JSON.stringify(row,null,2);body.append(tr)}draw(view)}
+// Aircraft label: callsign (or ICAO) and flight level from $PADSB.
+function aircraftLabel(row){const d=row.decoded||{},alt=Number(d.altitude_ft);
+  return (d.callsign||row.icao)+(d.altitude_ft!==null&&Number.isFinite(alt)?' FL'+String(Math.round(alt/100)).padStart(3,'0'):'')}
 function draw(view){
   if(!globe)return;
   globeEntities.forEach(entity=>globe.entities.remove(entity));globeEntities=[];symbolRows.clear();
@@ -78,7 +81,7 @@ function draw(view){
     if(focusedRow&&!pts.some(r=>r.id===focusedRow.id))pts.unshift(focusedRow)}
   const tracks=new Map();
   for(const row of [...pts].reverse()){
-    const key=row.source+':'+(row.mmsi||'GPS');
+    const key=row.icao?'ICAO:'+row.icao:row.source+':'+(row.mmsi||'GPS');
     if(!tracks.has(key))tracks.set(key,[]);
     tracks.get(key).push(row);
   }
@@ -88,16 +91,17 @@ function draw(view){
     const color=watched?Cesium.Color.RED:[Cesium.Color.TURQUOISE,Cesium.Color.CORNFLOWERBLUE,Cesium.Color.ORANGE,Cesium.Color.VIOLET][index++%4];
     const coords=list.map(p=>Cesium.Cartesian3.fromDegrees(p.longitude,p.latitude));
     if(coords.length>1)globeEntities.push(globe.entities.add({polyline:{positions:coords,width:2,material:color.withAlpha(.75)}}));
-    const cog=Number(latest.decoded?.course??latest.decoded?.cog??latest.decoded?.true_course);
+    const aircraft=!!latest.icao,cog=Number(latest.decoded?.course??latest.decoded?.cog??latest.decoded?.true_course??latest.decoded?.track_deg);
     const lon=latest.longitude,lat=latest.latitude;
-    const description='MMSI '+(latest.mmsi||'自船')+' / '+latest.received_at;
-    const symbol=globe.entities.add({name:latest.mmsi||'GPS',description,
+    const name=aircraft?aircraftLabel(latest):latest.mmsi||'GPS';
+    const description=(aircraft?'ICAO '+latest.icao:'MMSI '+(latest.mmsi||'自船'))+' / '+latest.received_at;
+    const symbol=globe.entities.add({name,description,
       position:Cesium.Cartesian3.fromDegrees(lon,lat),
-      ...NmeaSymbols.graphics({own:!latest.mmsi,watched,selected:latest.mmsi===focusedMmsi&&latest.id===focusedRow?.id}),
-      label:{text:latest.mmsi||'GPS',font:'12px sans-serif',fillColor:Cesium.Color.WHITE,showBackground:true,
+      ...NmeaSymbols.graphics({own:!latest.mmsi&&!aircraft,watched,platform:aircraft?'aircraft':'ship',selected:latest.id===focusedRow?.id&&(aircraft?latest.icao===focusedRow.icao:latest.mmsi===focusedMmsi)}),
+      label:{text:name,font:'12px sans-serif',fillColor:Cesium.Color.WHITE,showBackground:true,
              pixelOffset:new Cesium.Cartesian2(0,-34),distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,3000000)}});
     globeEntities.push(symbol);symbolRows.set(symbol,latest);
-    if(latest.mmsi===focusedMmsi&&latest.id===focusedRow?.id){globe.selectedEntity=symbol;selectedSymbol=latest}
+    if(latest.id===focusedRow?.id){globe.selectedEntity=symbol;selectedSymbol=latest}
     if(Number.isFinite(cog) && cog>=0 && cog<360){
       const d=.012,r=cog*Math.PI/180, nextLat=lat+d*Math.cos(r),nextLon=lon+d*Math.sin(r)/Math.max(.1,Math.cos(lat*Math.PI/180));
       globeEntities.push(globe.entities.add({polyline:{positions:Cesium.Cartesian3.fromDegreesArray([lon,lat,nextLon,nextLat]),width:2,material:color}}));

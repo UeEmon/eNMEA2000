@@ -274,8 +274,9 @@ async def delete_data(payload: DeleteRequest):
 
 @app.get('/api/events')
 async def events(limit: int=Query(200,ge=1,le=2000), before:int|None=None, source:str|None=None,
-                 kind:str|None=None, mmsi:str|None=None, after:int|None=None):
-    return await asyncio.to_thread(state.store.recent, limit, before, source, kind, mmsi, after)
+                 kind:str|None=None, mmsi:str|None=None, after:int|None=None,
+                 icao:str|None=Query(None,pattern=r'^[0-9A-F]{6}$')):
+    return await asyncio.to_thread(state.store.recent, limit, before, source, kind, mmsi, after, icao)
 
 @app.get('/api/watchlist')
 async def watchlist(): return await asyncio.to_thread(state.store.watchlist)

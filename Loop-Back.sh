@@ -43,6 +43,17 @@ compose_in emulator exec -T emulator python - emulator < scripts/configure-sdr-c
 compose_in sdr exec -T nmea-router python - receiver < scripts/configure-sdr-chain.py
 compose_in sdr-tx exec -T modulator python - transmitter-start < scripts/configure-sdr-chain.py
 
+# Optional: eADS-B2000 (github.com/UeEmon/eADS-B2000) checked out next to this repository,
+# or ADSB_DIR=/path/to/eADS-B2000. Its receiver sends $PADSB to TCP 10111.
+ADSB_DIR="${ADSB_DIR:-$ROOT/../eADS-B2000}"
+adsb_started=''
+if [ -f "$ADSB_DIR/compose.yaml" ]; then
+  phase='ADS-B（eADS-B2000）の起動'
+  printf '\n起動中: %s\n' "$ADSB_DIR"
+  (cd "$ADSB_DIR" && docker compose -f compose.yaml up -d --build --wait)
+  adsb_started=1
+fi
+
 printf '\n全環境の起動が完了しました。既定の接続先:\n'
 printf '  本体             http://localhost:18081  (.env の APP_TOKEN)\n'
 printf '  NMEAエミュレータ http://localhost:8090\n'
@@ -51,3 +62,8 @@ printf '  SDR送信模擬部    http://localhost:18083  (sdr-tx/.env の SDR_TX_
 printf 'ポートを変更済みの場合は各Compose設定の公開ポートを使用してください。\n'
 printf '連接: NMEAエミュレータ → TCP:10113 → SDR送信模擬部 → RTL-TCP:1235 → SDR受信部 → TCP:10111 → 本体\n'
 printf 'SDR受信と変調は開始済みです。NMEAエミュレータのWeb画面でデータ送信を開始してください。\n'
+if [ -n "$adsb_started" ]; then
+  printf 'ADS-B: シミュレータ（AVR TCP 30002）→ ADS-B受信部 → $PADSB TCP:10111 → 本体。航空機は地図に表示されます。\n'
+else
+  printf 'ADS-B環境は未起動です。eADS-B2000を本リポジトリと同じ階層に取得するか、ADSB_DIRを指定して再実行してください。\n'
+fi
