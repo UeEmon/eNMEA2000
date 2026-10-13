@@ -312,3 +312,20 @@ $PADSB,86D3A1,JAL123,35.549400,139.779800,12500,420.0,287.0,-1472,3*hh
 - DBの `events` テーブルに `icao` 列を追加しました。既存のDBには起動時に列を自動で追加し、保存データはそのまま残ります。API `GET /api/events?icao=86D3A1`（大文字16進6桁）で絞り込めます。
 - 地図では航空機シンボル（MIL-STD-2525D／APP-6Dの航空）に「呼出符号 FL高度」を表示します。クリックすると、右側にICAO・高度・速度・航跡・昇降率を表示します。航跡はICAO単位でまとめます。
 - `bash Loop-Back.sh` は、本リポジトリと同じ階層に `eADS-B2000` がある場合（または `ADSB_DIR` を指定した場合）に、ADS-B環境も起動します。
+- eADS-B2000の既定経路は、シミュレータ → ADS-B用SDR送信模擬部（RTL-TCP 1236）→ ADS-B受信部 → `$PADSB` → 本体（TCP 10111）です。
+
+## 実機RTL-SDRで受信（Loop-Back.sh）
+
+模擬部の代わりに実機のRTL-SDRを使う場合は、端末で `rtl_tcp` を起動してから、接続先を環境変数で渡します。**AIS（162 MHz）とADS-B（1090 MHz）を同時に受けるにはドングルが2本必要です**（`-d 0`／`-d 1` で指定）。
+
+```bash
+brew install librtlsdr   # Mac。LinuxはOSのrtl-sdrパッケージ
+rtl_tcp -a 0.0.0.0 -p 1234 -f 162000000  -s 1536000 -d 0 &   # AIS
+rtl_tcp -a 0.0.0.0 -p 1237 -f 1090000000 -s 2000000 -d 1 &   # ADS-B
+AIS_RTL_TCP=host.docker.internal:1234 ADSB_RTL_TCP=host.docker.internal:1237 bash Loop-Back.sh
+```
+
+- `AIS_RTL_TCP` を指定すると、SDR受信部の入力を実機のrtl_tcp（1536 kS/s）にし、AIS送信模擬部の変調は開始しません。
+- `ADSB_RTL_TCP` を指定すると、eADS-B2000は受信部だけを起動し、実機のI/Qを復調して `$PADSB` を本体へ送ります。
+- どちらか一方だけの指定もできます。ホストの1235／1236は送信模擬部が使うため、実機のrtl_tcpには別のポートを使います。`rtl_tcp -a 0.0.0.0` はLANに公開されるので、必要な範囲だけで使ってください。
+- LinuxでUSBをコンテナへ直結する場合は、[sdr/README.md](sdr/README.md) とeADS-B2000の `compose.usb.yaml` を参照してください。

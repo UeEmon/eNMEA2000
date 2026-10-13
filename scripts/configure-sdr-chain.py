@@ -8,6 +8,16 @@ import urllib.error
 import urllib.request
 
 
+def rtl_tcp_source(value):
+    """AIS_RTL_TCP=host:port selects a real rtl_tcp receiver instead of the modulator."""
+    if not value:
+        return dict(host='host.docker.internal', port=1235, sample_rate=288000)
+    host, sep, port = value.rpartition(':')
+    if not sep or not host or not port.isdigit() or not 0 < int(port) < 65536:
+        raise ValueError('AIS_RTL_TCP must be host:port')
+    return dict(host=host, port=int(port), sample_rate=1536000)
+
+
 def configure(stage):
     port = {'main': 80, 'emulator': 8090, 'receiver': 8002,
             'transmitter-config': 80, 'transmitter-start': 80}[stage]
@@ -35,8 +45,8 @@ def configure(stage):
         api('config', {'amplitude': 0.65, 'noise': 0, 'offset': 0, 'corrupt': False})
     elif stage == 'receiver':
         config = api('config')
-        config['input'].update(kind='rtltcp', host='host.docker.internal', port=1235,
-                               sample_rate=288000, ppm=0, gain='auto', format='CU8')
+        config['input'].update(kind='rtltcp', ppm=0, gain='auto', format='CU8',
+                               **rtl_tcp_source(os.environ.get('AIS_RTL_TCP', '')))
         config['destinations'] = [{'enabled': True, 'protocol': 'tcp',
                                    'host': 'host.docker.internal', 'port': 10111}]
         api('config', config)
