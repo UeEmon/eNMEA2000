@@ -298,3 +298,7 @@ UDP/TCP受信、ファイル解析、端末内SQLite保存、オフラインCesi
 ## SDR受信部の変調・復調試験
 
 [SDR送信エミュレータの構築・接続手順](sdr-tx/README.md)。既存エミュレータからのAISをGMSK変調し、I/QストリームまたはファイルでSDR受信部を試験できます。管理画面は `http://localhost:18083` です。
+
+## ADS-B（1090ES）受信・シミュレータ
+
+[ADS-B設計書](docs/ADSB_DESIGN.md)。航空機トラフィックのシミュレータ、Mode S/1090ESデコーダ、PPM変復調、受信部と、既存本体へのAIS Type 9ブリッジを `adsb/` に置きます。ローカルOllamaによるコーディング補助CLI（`python -m adsb.ollama_assist`）を含みます。
