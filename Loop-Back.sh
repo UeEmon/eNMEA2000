@@ -5,6 +5,10 @@ set -Eeuo pipefail
 #   AIS_RTL_TCP=host.docker.internal:1234   rtl_tcp -a 0.0.0.0 -p 1234 -f 162000000 -s 1536000 -d 0
 #   ADSB_RTL_TCP=host.docker.internal:1237  rtl_tcp -a 0.0.0.0 -p 1237 -f 1090000000 -s 2000000 -d 1
 # Host ports 1235/1236 belong to the AIS and ADS-B transmit emulators.
+# Extra outputs besides the main app (kept on re-run, also editable in the SDR receiver UI):
+#   AIS_OUTPUTS=udp://192.168.1.30:10110,tcp://192.168.1.31:10111   (AIS NMEA to iPads etc.)
+#   ADSB_OUTPUTS=tcp://host.docker.internal:10111,udp://192.168.1.30:10110/ais9   (read by eADS-B2000)
+AIS_OUTPUTS="${AIS_OUTPUTS:-}"
 AIS_RTL_TCP="${AIS_RTL_TCP:-}"
 ADSB_RTL_TCP="${ADSB_RTL_TCP:-}"
 host_port='^[A-Za-z0-9._-]+:[0-9]{1,5}$'
@@ -53,7 +57,7 @@ phase='SDR連接設定'
 compose_in . exec -T app python - main < scripts/configure-sdr-chain.py
 compose_in sdr-tx exec -T modulator python - transmitter-config < scripts/configure-sdr-chain.py
 compose_in emulator exec -T emulator python - emulator < scripts/configure-sdr-chain.py
-compose_in sdr exec -T -e AIS_RTL_TCP="$AIS_RTL_TCP" nmea-router python - receiver < scripts/configure-sdr-chain.py
+compose_in sdr exec -T -e AIS_RTL_TCP="$AIS_RTL_TCP" -e AIS_OUTPUTS="$AIS_OUTPUTS" nmea-router python - receiver < scripts/configure-sdr-chain.py
 if [ -z "$AIS_RTL_TCP" ]; then
   compose_in sdr-tx exec -T modulator python - transmitter-start < scripts/configure-sdr-chain.py
 fi

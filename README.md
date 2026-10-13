@@ -329,3 +329,17 @@ AIS_RTL_TCP=host.docker.internal:1234 ADSB_RTL_TCP=host.docker.internal:1237 bas
 - `ADSB_RTL_TCP` を指定すると、eADS-B2000は受信部だけを起動し、実機のI/Qを復調して `$PADSB` を本体へ送ります。
 - どちらか一方だけの指定もできます。ホストの1235／1236は送信模擬部が使うため、実機のrtl_tcpには別のポートを使います。`rtl_tcp -a 0.0.0.0` はLANに公開されるので、必要な範囲だけで使ってください。
 - LinuxでUSBをコンテナへ直結する場合は、[sdr/README.md](sdr/README.md) とeADS-B2000の `compose.usb.yaml` を参照してください。
+
+## 受信部から複数の出力先へ送る（本体＋iPad等）
+
+AISのSDR受信部とADS-B受信部は、本体以外の宛先（iPad版など）へも同時に出力できます。iPadの宛先はLANのIPアドレスで、iPad版の受信設定（初期値UDP 10110／TCP 10111）に合わせます。
+
+```bash
+AIS_OUTPUTS="udp://192.168.1.30:10110" \
+ADSB_OUTPUTS="tcp://host.docker.internal:10111,udp://192.168.1.30:10110/ais9" \
+bash Loop-Back.sh
+```
+
+- **AIS**（`AIS_OUTPUTS`）：`tcp://ホスト:ポート` または `udp://ホスト:ポート` をカンマ区切りで指定します。受信部は最大16件まで出力できます。SDR受信部の管理画面（`http://localhost:18082`）でも追加・削除できます。`Loop-Back.sh` を再実行しても、画面で追加した宛先は残ります。本体（TCP 10111）は常に先頭に入ります。
+- **ADS-B**（`ADSB_OUTPUTS`）：宛先ごとに書式を選べます。`/padsb` は本体向けで既定です。`/ais9` はiPad版など `$PADSB` 未対応の受信側向けで、AIS Type 9（捜索救難航空機）として表示されます。詳細はeADS-B2000の設計書7.3節を参照してください。
+- 1つの宛先が落ちても、他の宛先への送信は続きます。

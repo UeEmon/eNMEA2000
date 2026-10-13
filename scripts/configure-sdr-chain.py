@@ -18,6 +18,32 @@ def rtl_tcp_source(value):
     return dict(host=host, port=int(port), sample_rate=1536000)
 
 
+MAIN = {'enabled': True, 'protocol': 'tcp', 'host': 'host.docker.internal', 'port': 10111}
+
+
+def destinations(existing, extra=''):
+    """Main app first, then destinations already saved (e.g. iPads added in the UI), then AIS_OUTPUTS."""
+    key = lambda d: (d['protocol'], d['host'], d['port'])
+    result, seen = [dict(MAIN)], {key(MAIN)}
+    for d in existing:
+        if key(d) not in seen:
+            result.append(d)
+            seen.add(key(d))
+    for item in filter(None, (v.strip() for v in extra.split(','))):
+        protocol, sep, rest = item.partition('://')
+        host, _, port = rest.rpartition(':')
+        if not sep or protocol not in ('tcp', 'udp') or not host or not port.isdigit() \
+                or not 0 < int(port) < 65536:
+            raise ValueError('AIS_OUTPUTS must be tcp://host:port or udp://host:port, comma-separated')
+        d = {'enabled': True, 'protocol': protocol, 'host': host, 'port': int(port)}
+        if key(d) not in seen:
+            result.append(d)
+            seen.add(key(d))
+    if len(result) > 16:
+        raise ValueError('Maximum 16 destinations')
+    return result
+
+
 def configure(stage):
     port = {'main': 80, 'emulator': 8090, 'receiver': 8002,
             'transmitter-config': 80, 'transmitter-start': 80}[stage]
@@ -47,8 +73,8 @@ def configure(stage):
         config = api('config')
         config['input'].update(kind='rtltcp', ppm=0, gain='auto', format='CU8',
                                **rtl_tcp_source(os.environ.get('AIS_RTL_TCP', '')))
-        config['destinations'] = [{'enabled': True, 'protocol': 'tcp',
-                                   'host': 'host.docker.internal', 'port': 10111}]
+        config['destinations'] = destinations(config.get('destinations', []),
+                                              os.environ.get('AIS_OUTPUTS', ''))
         api('config', config)
         api('start', {})
         deadline = time.monotonic() + 30
