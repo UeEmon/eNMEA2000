@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Text, Float, select, func, or_
+from sqlalchemy import create_engine, inspect, MetaData, Table, Column, Integer, String, Text, Float, select, func, or_
 
 class WatchConflict(Exception):
     def __init__(self, records):
@@ -15,7 +15,8 @@ class Store:
             Column('id', Integer, primary_key=True), Column('received_at', String(40), index=True),
             Column('source', String(180), index=True), Column('sentence_type', String(24), index=True),
             Column('status', String(24), index=True), Column('mmsi', String(16), index=True),
-            Column('latitude', Float), Column('longitude', Float), Column('payload', Text))
+            Column('latitude', Float), Column('longitude', Float), Column('payload', Text),
+            Column('icao', String(6), index=True))
         self.jobs = Table('jobs', meta, Column('id', String(40), primary_key=True), Column('payload', Text))
         self.watch = Table('watch_vessels', meta,
             Column('id', Integer, primary_key=True), Column('mmsi', String(9), unique=True),
@@ -30,6 +31,11 @@ class Store:
             Column('mmsi', String(9)), Column('imo', String(7)), Column('name', String(120)),
             Column('matched_by', String(12)))
         meta.create_all(self.engine)
+        if 'icao' not in {c['name'] for c in inspect(self.engine).get_columns('events')}:
+            # Databases created before ADS-B support: add the column in place, keep all rows.
+            with self.engine.begin() as c:
+                c.exec_driver_sql('ALTER TABLE events ADD COLUMN icao VARCHAR(6)')
+                c.exec_driver_sql('CREATE INDEX IF NOT EXISTS ix_events_icao ON events (icao)')
         if url.startswith('sqlite'):
             with self.engine.connect() as c: c.exec_driver_sql('PRAGMA journal_mode=WAL')
 
@@ -40,7 +46,7 @@ class Store:
             known = {r.mmsi: dict(r._mapping) for r in c.execute(select(self.identities).where(self.identities.c.mmsi.in_(mmsis)))} if mmsis else {}
             now = datetime.now(timezone.utc)
             for row in rows:
-                values = {k: row.get(k) for k in ['received_at','source','sentence_type','status','mmsi','latitude','longitude']}
+                values = {k: row.get(k) for k in ['received_at','source','sentence_type','status','mmsi','icao','latitude','longitude']}
                 result = c.execute(self.events.insert().values(**values, payload=json.dumps(row, ensure_ascii=False)))
                 row['id'] = result.inserted_primary_key[0]
                 if row.get('status')!='ok' or row.get('sentence_type') not in ('VDM','VDO') or not row.get('mmsi'): continue
@@ -110,9 +116,9 @@ class Store:
             row=c.execute(query).first()
             return dict(json.loads(row.payload),id=row.id) if row else None
 
-    def recent(self, limit=200, before=None, source=None, kind=None, mmsi=None, after=None):
+    def recent(self, limit=200, before=None, source=None, kind=None, mmsi=None, after=None, icao=None):
         query = select(self.events)
-        for col, value in [('source',source),('sentence_type',kind),('mmsi',mmsi)]:
+        for col, value in [('source',source),('sentence_type',kind),('mmsi',mmsi),('icao',icao)]:
             if value: query = query.where(self.events.c[col] == value)
         if before: query = query.where(self.events.c.id < before)
         if after is not None: query = query.where(self.events.c.id > after)

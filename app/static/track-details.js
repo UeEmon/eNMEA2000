@@ -1,6 +1,6 @@
 'use strict';
 let trackHistory=[],trackIdentity={},trackRequest=0,trackLoadMessage='';
-function sameTrack(row){return focusedRow&&(focusedRow.mmsi?row.mmsi===focusedRow.mmsi:!row.mmsi&&row.source===focusedRow.source)}
+function sameTrack(row){return focusedRow&&(focusedRow.icao?row.icao===focusedRow.icao:focusedRow.mmsi?row.mmsi===focusedRow.mmsi:!row.mmsi&&!row.icao&&row.source===focusedRow.source)}
 function hasPosition(row){return row.status==='ok'&&Number.isFinite(row.latitude)&&Number.isFinite(row.longitude)}
 function retainTrackRows(data){
   if(!focusedRow)return;
@@ -14,7 +14,7 @@ function selectTrack(row){
   retainTrackRows([row,...rows]);draw(filtered());renderAlerts();
   $('detail').textContent=JSON.stringify(row,null,2);
   const request=++trackRequest;
-  const query=new URLSearchParams({limit:'500',...(row.mmsi?{mmsi:row.mmsi}:{source:row.source})});
+  const query=new URLSearchParams({limit:'500',...(row.icao?{icao:row.icao}:row.mmsi?{mmsi:row.mmsi}:{source:row.source})});
   Promise.all([api('/api/events?'+query),row.mmsi?api('/api/identities/'+encodeURIComponent(row.mmsi)):Promise.resolve({})])
     .then(([history,identity])=>{if(request!==trackRequest)return;trackIdentity=identity;retainTrackRows(history);trackLoadMessage='';draw(filtered())})
     .catch(err=>{if(request!==trackRequest)return;trackLoadMessage='履歴取得失敗: '+err.message;renderTrackDetails()});
@@ -29,11 +29,32 @@ function trackNumber(value,unit='',max=Infinity,digits=1){
   if(value===null||value===undefined||value==='')return '—';
   const n=Number(value);return Number.isFinite(n)&&n>=0&&n<max?n.toFixed(digits)+unit:'—';
 }
+function renderTrackRows(fields,positions){
+  const list=$('trackFields');list.replaceChildren();
+  for(const [label,value] of fields){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=String(value);list.append(dt,dd)}
+  $('trackStatus').textContent=trackLoadMessage||`取得済み最新500件以内の位置情報 ${positions.length}件（下表は最新20件・受信順）`;
+  const body=$('trackHistory');body.replaceChildren();
+  for(const p of positions.slice(0,20)){const tr=document.createElement('tr');
+    for(const value of [new Date(p.received_at).toLocaleString(),p.latitude.toFixed(5),p.longitude.toFixed(5)]){const td=document.createElement('td');td.textContent=value;tr.append(td)}body.append(tr)}
+}
+function renderAircraftDetails(row,d,positions){
+  const callsign=d.callsign||trackHistory.find(r=>r.decoded?.callsign)?.decoded.callsign;
+  $('trackName').textContent=callsign||'ICAO '+row.icao;
+  const rate=Number(d.vertical_rate_fpm);
+  const fields=[['ICAO',row.icao],['呼出符号',callsign||'—'],['最新受信時刻',new Date(row.received_at).toLocaleString()],
+    ['入力元',row.source],['緯度',Number.isFinite(row.latitude)?row.latitude.toFixed(6)+'°':'—'],
+    ['経度',Number.isFinite(row.longitude)?row.longitude.toFixed(6)+'°':'—'],['気圧高度',trackNumber(d.altitude_ft,' ft',Infinity,0)],
+    ['対地速度',trackNumber(d.ground_speed_kt,' kt')],['対地航跡',trackNumber(d.track_deg,'°',360)],
+    ['昇降率',d.vertical_rate_fpm===null||d.vertical_rate_fpm===undefined||!Number.isFinite(rate)?'—':rate+' ft/min'],['メッセージ','ADS-B（$PADSB）']];
+  renderTrackRows(fields,positions);
+  $('trackRaw').textContent=JSON.stringify(row,null,2);
+}
 function renderTrackDetails(){
   const row=focusedRow;
   $('trackEmpty').hidden=!!row;$('trackContent').hidden=!row;$('trackClose').disabled=!row;
   if(!row){$('trackFields').replaceChildren();$('trackHistory').replaceChildren();$('trackRaw').textContent='';$('trackName').textContent='';$('trackStatus').textContent='';return}
   const d=row.decoded||{},positions=trackHistory.filter(hasPosition);
+  if(row.icao){renderAircraftDetails(row,d,positions);return}
   const identity={...trackIdentity,...identityByMmsi.get(row.mmsi)};
   const name=identity.shipname||trackHistory.find(r=>r.decoded?.shipname)?.decoded.shipname;
   const imo=identity.imo||trackHistory.find(r=>r.decoded?.imo)?.decoded.imo;
@@ -45,11 +66,6 @@ function renderTrackDetails(){
     ['対地針路（COG）',trackNumber(d.course??d.cog??d.true_course,'°',360)],
     ['対地速力（SOG）',trackNumber(d.speed??d.spd_over_grnd,' kn',row.mmsi?102.3:Infinity)],
     ['船首方位',trackNumber(d.heading,'°',360,0)],['メッセージ',d.msg_type!==undefined?'AIS Type '+d.msg_type+(row.ais_type_name?' / '+row.ais_type_name:''):row.sentence_type]];
-  const list=$('trackFields');list.replaceChildren();
-  for(const [label,value] of fields){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=String(value);list.append(dt,dd)}
-  $('trackStatus').textContent=trackLoadMessage||`取得済み最新500件以内の位置情報 ${positions.length}件（下表は最新20件・受信順）`;
-  const body=$('trackHistory');body.replaceChildren();
-  for(const p of positions.slice(0,20)){const tr=document.createElement('tr');
-    for(const value of [new Date(p.received_at).toLocaleString(),p.latitude.toFixed(5),p.longitude.toFixed(5)]){const td=document.createElement('td');td.textContent=value;tr.append(td)}body.append(tr)}
+  renderTrackRows(fields,positions);
   $('trackRaw').textContent=JSON.stringify(row,null,2);
 }
