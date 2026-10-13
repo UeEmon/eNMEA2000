@@ -66,7 +66,7 @@ NMEAログはDockerボリューム `sdr-data` 内に保存。標準上限100MB�
 
 ## 構成・保護
 
-- `ais-receiver`: AIS-catcherとプロセス管理。USB、RTL-TCP、SpyServer、raw I/Q入力。
+- `ais-receiver`: AIS-catcherとプロセス管理。USB、RTL-TCP、SpyServer、raw I/Q入力。aiscatcher.orgへのコミュニティ共有は `-X off` で常に無効化し、受信データを外部へ送りません。
 - `nmea-router`: 検証・ログ・配信・管理API。依存Pythonパッケージなし。
 - `receiver-web`: Nginx、内部80、ホスト18082。8080/8888は使用しません。
 

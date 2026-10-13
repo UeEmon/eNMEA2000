@@ -10,7 +10,7 @@ from core import validate
 def command(config, iq_root='/iq'):
     inp = validate(config)['input']
     args = ['AIS-catcher', '-q', '-c', 'AB', '-s', str(inp['sample_rate']), '-p', str(inp['ppm']),
-            '-u', 'nmea-router', '10112']
+            '-u', 'nmea-router', '10112', '-X', 'off']
     kind = inp['kind']
     if kind == 'rtltcp':
         args += ['-t', inp['host'], str(inp['port']), '-gt', 'TUNER', str(inp['gain']), 'TIMEOUT', '10']
