@@ -62,6 +62,7 @@ bash Loop-Back.sh
 |---|---|---|
 | 本体 | http://localhost:18081 | `.env` の `APP_TOKEN` |
 | NMEAエミュレータ | http://localhost:8090 | 不要 |
+| ADS-Bシミュレータ（eADS-B2000起動時） | http://localhost:8091 | 不要 |
 | SDR受信部 | http://localhost:18082 | `sdr/.env` の `SDR_TOKEN` |
 | SDR送信模擬部 | http://localhost:18083 | `sdr-tx/.env` の `SDR_TX_TOKEN` |
 

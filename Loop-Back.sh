@@ -95,6 +95,7 @@ if [ -n "$adsb_started" ] && [ -n "$ADSB_RTL_TCP" ]; then
   printf 'ADS-B: 実機RTL-SDR（rtl_tcp %s, 1090 MHz）→ ADS-B受信部 → $PADSB TCP:10111 → 本体。\n' "$ADSB_RTL_TCP"
 elif [ -n "$adsb_started" ]; then
   printf 'ADS-B: シミュレータ → SDR送信模擬部（RTL-TCP:1236）→ ADS-B受信部 → $PADSB TCP:10111 → 本体。航空機は地図に表示されます。\n'
+  printf '  ADS-Bシミュレータ http://localhost:8091  (複数機の諸元を一括設定)\n'
 else
   printf 'ADS-B環境は未起動です。eADS-B2000を本リポジトリと同じ階層に取得するか、ADSB_DIRを指定して再実行してください。\n'
 fi
