@@ -336,10 +336,10 @@ AISのSDR受信部とADS-B受信部は、本体以外の宛先（iPad版など�
 
 ```bash
 AIS_OUTPUTS="udp://192.168.1.30:10110" \
-ADSB_OUTPUTS="tcp://host.docker.internal:10111,udp://192.168.1.30:10110/ais9" \
+ADSB_OUTPUTS="tcp://host.docker.internal:10111,udp://192.168.1.30:10110" \
 bash Loop-Back.sh
 ```
 
 - **AIS**（`AIS_OUTPUTS`）：`tcp://ホスト:ポート` または `udp://ホスト:ポート` をカンマ区切りで指定します。受信部は最大16件まで出力できます。SDR受信部の管理画面（`http://localhost:18082`）でも追加・削除できます。`Loop-Back.sh` を再実行しても、画面で追加した宛先は残ります。本体（TCP 10111）は常に先頭に入ります。
-- **ADS-B**（`ADSB_OUTPUTS`）：宛先ごとに書式を選べます。`/padsb` は本体向けで既定です。`/ais9` はiPad版など `$PADSB` 未対応の受信側向けで、AIS Type 9（捜索救難航空機）として表示されます。詳細はeADS-B2000の設計書7.3節を参照してください。
+- **ADS-B**（`ADSB_OUTPUTS`）：本体・iPad版とも `$PADSB` を受け、AISとは別の航空機として表示します（AIS Type 9には変換しません）。詳細はeADS-B2000の設計書7.3節を参照してください。
 - 1つの宛先が落ちても、他の宛先への送信は続きます。

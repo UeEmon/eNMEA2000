@@ -7,7 +7,7 @@ set -Eeuo pipefail
 # Host ports 1235/1236 belong to the AIS and ADS-B transmit emulators.
 # Extra outputs besides the main app (kept on re-run, also editable in the SDR receiver UI):
 #   AIS_OUTPUTS=udp://192.168.1.30:10110,tcp://192.168.1.31:10111   (AIS NMEA to iPads etc.)
-#   ADSB_OUTPUTS=tcp://host.docker.internal:10111,udp://192.168.1.30:10110/ais9   (read by eADS-B2000)
+#   ADSB_OUTPUTS=tcp://host.docker.internal:10111,udp://192.168.1.30:10110   ($PADSB to iPads too; read by eADS-B2000)
 AIS_OUTPUTS="${AIS_OUTPUTS:-}"
 AIS_RTL_TCP="${AIS_RTL_TCP:-}"
 ADSB_RTL_TCP="${ADSB_RTL_TCP:-}"

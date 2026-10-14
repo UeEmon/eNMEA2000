@@ -11,6 +11,9 @@ public struct Event: Codable, Identifiable {
  public var latitude: Double? { fields["lat"].flatMap(Double.init) }
  public var longitude: Double? { fields["lon"].flatMap(Double.init) }
  public var aisType: Int? { fields["msg_type"].flatMap(Int.init) }
+ public var icao: String? { fields["icao"] }
+ /// Track key: MMSI for AIS, ICAO address for ADS-B aircraft (6 hex digits never equal a 9-digit MMSI).
+ public var trackKey: String? { mmsi ?? icao }
  public init(source: String, raw: String) { self.source = source; self.raw = raw }
 }
 public struct Watch: Codable, Identifiable, Equatable {
@@ -36,6 +39,7 @@ public struct Track: Codable, Identifiable {
  public var fields: [String: String]
  public var watched: Bool
  public var trail: [[Double]]
+ public var aircraft: Bool = false
 }
 public enum NMEAError: LocalizedError {
  case invalid(String), duplicate(Watch), database(String)
