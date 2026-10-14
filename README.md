@@ -54,7 +54,7 @@ bash Loop-Back.sh
 ```
 
 既に取得済みなら、リポジトリ内で `git pull --ff-only` の後に `bash Loop-Back.sh` を実行します。
-AISとADS-Bをすべて一度に起動します。ADS-B（[eADS-B2000](https://github.com/UeEmon/eADS-B2000)）は、本リポジトリと同じ階層になければ初回に自動で取得します（`git` が必要。`ADSB_ENABLE=0` でADS-Bを起動しません）。
+AISとADS-Bをすべて一度に起動します。ADS-Bは [adsb/](adsb/README.md) にあります（`ADSB_ENABLE=0` でADS-Bを起動しません）。
 起動完了後に、各画面の管理トークン（`APP_TOKEN`、`SDR_TOKEN`、`SDR_TX_TOKEN`）を表示します。あとから確認するときは `bash scripts/show-tokens.sh` を実行します。表示したくない場合は `SHOW_TOKENS=0 bash Loop-Back.sh` とします。
 ホストへのPython・Node.jsのインストールは不要です。初回はビルドに時間がかかります。
 本体（DBを含む）、NMEAエミュレータ、SDR受信部、SDR送信模擬部の4環境を起動し、起動完了を待ちます。
@@ -64,7 +64,7 @@ AISとADS-Bをすべて一度に起動します。ADS-B（[eADS-B2000](https://g
 |---|---|---|
 | 本体 | http://localhost:18081 | `.env` の `APP_TOKEN` |
 | NMEAエミュレータ | http://localhost:8090 | 不要 |
-| ADS-Bシミュレータ（eADS-B2000起動時） | http://localhost:8091 | 不要 |
+| ADS-Bシミュレータ | http://localhost:8091 | 不要 |
 | SDR受信部 | http://localhost:18082 | `sdr/.env` の `SDR_TOKEN` |
 | SDR送信模擬部 | http://localhost:18083 | `sdr-tx/.env` の `SDR_TX_TOKEN` |
 
@@ -304,7 +304,7 @@ UDP/TCP受信、ファイル解析、端末内SQLite保存、オフラインCesi
 
 ## ADS-B（航空機）の受信・表示
 
-航空機のADS-B受信部とシミュレータは別リポジトリ [eADS-B2000](https://github.com/UeEmon/eADS-B2000) です。受信部が独自センテンス `$PADSB` をTCP 10111（またはUDP 10110）へ送ると、本体が航空機として保存・表示します。
+航空機のADS-Bシミュレータ・ADS-B送信模擬部・ADS-B受信部は [adsb/](adsb/README.md) にあります（旧 [eADS-B2000](https://github.com/UeEmon/eADS-B2000) リポジトリを履歴ごと統合）。受信部が独自センテンス `$PADSB` をTCP 10111（またはUDP 10110）へ送ると、本体が航空機として保存・表示します。
 
 ```
 $PADSB,ICAO,呼出符号,緯度,経度,気圧高度ft,対地速度kt,対地航跡度,昇降率ft/min,カテゴリ*hh
@@ -314,8 +314,8 @@ $PADSB,86D3A1,JAL123,35.549400,139.779800,12500,420.0,287.0,-1472,3*hh
 - 緯度経度は符号付きの度です（NMEAの度分形式ではありません）。不明な項目は空欄にします。チェックサムは必須です。
 - DBの `events` テーブルに `icao` 列を追加しました。既存のDBには起動時に列を自動で追加し、保存データはそのまま残ります。API `GET /api/events?icao=86D3A1`（大文字16進6桁）で絞り込めます。
 - 地図では航空機シンボル（MIL-STD-2525D／APP-6Dの航空）に「呼出符号 FL高度」を表示します。クリックすると、右側にICAO・高度・速度・航跡・昇降率を表示します。航跡はICAO単位でまとめます。
-- `bash Loop-Back.sh` はADS-B環境も起動します。eADS-B2000は本リポジトリと同じ階層（または `ADSB_DIR`）になければ自動で取得します。
-- eADS-B2000の既定経路は、シミュレータ → ADS-B用SDR送信模擬部（RTL-TCP 1236）→ ADS-B受信部 → `$PADSB` → 本体（TCP 10111）です。
+- `bash Loop-Back.sh` はADS-B環境（`adsb/compose.yaml`）も起動します。
+- ADS-Bの既定経路は、シミュレータ → ADS-B用SDR送信模擬部（RTL-TCP 1236）→ ADS-B受信部 → `$PADSB` → 本体（TCP 10111）です。
 
 ## 実機RTL-SDRで受信（Loop-Back.sh）
 
@@ -329,9 +329,9 @@ AIS_RTL_TCP=host.docker.internal:1234 ADSB_RTL_TCP=host.docker.internal:1237 bas
 ```
 
 - `AIS_RTL_TCP` を指定すると、SDR受信部の入力を実機のrtl_tcp（1536 kS/s）にし、AIS送信模擬部の変調は開始しません。
-- `ADSB_RTL_TCP` を指定すると、eADS-B2000は受信部だけを起動し、実機のI/Qを復調して `$PADSB` を本体へ送ります。
+- `ADSB_RTL_TCP` を指定すると、ADS-Bは受信部だけを起動し、実機のI/Qを復調して `$PADSB` を本体へ送ります。
 - どちらか一方だけの指定もできます。ホストの1235／1236は送信模擬部が使うため、実機のrtl_tcpには別のポートを使います。`rtl_tcp -a 0.0.0.0` はLANに公開されるので、必要な範囲だけで使ってください。
-- LinuxでUSBをコンテナへ直結する場合は、[sdr/README.md](sdr/README.md) とeADS-B2000の `compose.usb.yaml` を参照してください。
+- LinuxでUSBをコンテナへ直結する場合は、[sdr/README.md](sdr/README.md) と [adsb/compose.usb.yaml](adsb/compose.usb.yaml) を参照してください。
 
 ## 受信部から複数の出力先へ送る（本体＋iPad等）
 
@@ -344,5 +344,5 @@ bash Loop-Back.sh
 ```
 
 - **AIS**（`AIS_OUTPUTS`）：`tcp://ホスト:ポート` または `udp://ホスト:ポート` をカンマ区切りで指定します。受信部は最大16件まで出力できます。SDR受信部の管理画面（`http://localhost:18082`）でも追加・削除できます。`Loop-Back.sh` を再実行しても、画面で追加した宛先は残ります。本体（TCP 10111）は常に先頭に入ります。
-- **ADS-B**（`ADSB_OUTPUTS`）：本体・iPad版とも `$PADSB` を受け、AISとは別の航空機として表示します（AIS Type 9には変換しません）。詳細はeADS-B2000の設計書7.3節を参照してください。
+- **ADS-B**（`ADSB_OUTPUTS`）：本体・iPad版とも `$PADSB` を受け、AISとは別の航空機として表示します（AIS Type 9には変換しません）。詳細は [ADS-Bの設計書](adsb/docs/ADSB_DESIGN.md) 7.3節を参照してください。
 - 1つの宛先が落ちても、他の宛先への送信は続きます。

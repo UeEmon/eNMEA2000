@@ -1,0 +1,46 @@
+name: ADS-B
+on:
+  push:
+    branches: [main, codex/**]
+    paths: ['adsb/**', '.github/workflows/adsb.yml']
+  pull_request:
+    paths: ['adsb/**', '.github/workflows/adsb.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    working-directory: adsb
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 3.9 is the python3 that ships with macOS (Command Line Tools)
+        python-version: ['3.9', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '${{ matrix.python-version }}'}
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+      - run: python -m adsb.simulator --count 5 --seconds 10 --seed 1 --iq traffic.cu8 --noise 0.03
+      - run: python -m adsb.receiver --iq traffic.cu8 --quiet
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Two outputs at once, both $PADSB: TCP (eNMEA2000) and UDP (iPad stand-in).
+      - run: python3 scripts/wait_padsb.py 10111 5 > padsb.log &
+      - run: python3 scripts/wait_padsb.py 10110 5 udp > udp.log &
+      - run: docker compose up -d --build --wait
+        env:
+          ADSB_OUTPUTS: tcp://host.docker.internal:10111,udp://host.docker.internal:10110
+      - run: |
+          for i in $(seq 60); do grep -q '^OK:' padsb.log && grep -q '^OK:' udp.log && break; sleep 2; done
+          cat padsb.log udp.log
+          grep -q '^OK:' padsb.log && grep -q '^OK:' udp.log
+      - if: always()
+        run: docker compose logs --tail=50
+      - if: always()
+        run: docker compose down
