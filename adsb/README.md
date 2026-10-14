@@ -1,6 +1,8 @@
-# eADS-B2000
+# ADS-B（旧 eADS-B2000）
 
-[eNMEA2000](https://github.com/UeEmon/eNMEA2000)（NMEA0183/AIS受信システム）の構成を流用した、ADS-B（1090ES）受信システムと航空機トラフィックシミュレータです。コーディング補助にローカルLLM（Ollama）を使います。
+[eNMEA2000](../README.md)（NMEA0183/AIS受信システム）の構成を流用した、ADS-B（1090ES）受信システムと航空機トラフィックシミュレータです。コーディング補助にローカルLLM（Ollama）を使います。
+
+旧 eADS-B2000 リポジトリを履歴ごと eNMEA2000 の `adsb/` に統合しました。以下のコマンドはこのディレクトリ（`cd adsb`）で実行します。
 
 設計・使い方・段階計画は [docs/ADSB_DESIGN.md](docs/ADSB_DESIGN.md) を参照してください。
 
@@ -22,7 +24,7 @@ python -m adsb.receiver --avr-tcp localhost:30002 --forward localhost:10111 --qu
 
 シミュレータのWeb画面（`--web 8091`、Dockerでは http://localhost:8091 ）で、複数機の諸元を表やCSVで一括設定できます。位置は時間の経過に合わせて推測位置で更新します（設計書6.2節）。
 
-Dockerの場合は、eNMEA2000本体を起動してから `docker compose up -d --build --wait` を実行します。シミュレータ → SDR送信模擬部（rtl_tcp 1236）→ 受信部 → 本体（TCP 10111）の順につながります。eNMEA2000の `bash Loop-Back.sh` は、同じ階層にある本リポジトリも起動します。設定は設計書の7.1節を参照してください。
+Dockerの場合は、eNMEA2000本体を起動してから、このディレクトリで `docker compose up -d --build --wait` を実行します。シミュレータ → SDR送信模擬部（rtl_tcp 1236）→ 受信部 → 本体（TCP 10111）の順につながります。リポジトリ直下の `bash Loop-Back.sh` は、ADS-Bもまとめて起動します。設定は設計書の7.1節を参照してください。
 
 実機RTL-SDRは、Macなら端末で `rtl_tcp -a 0.0.0.0 -p 1234 -s 2000000 -f 1090000000` を動かし、`ADSB_SOURCE=host.docker.internal:1234 docker compose up -d --build --no-deps receiver` で切り替えます。Linuxは `compose.usb.yaml` でUSBを直結できます（設計書7.2節）。AISと同時に受けるにはドングルが2本必要です。
 

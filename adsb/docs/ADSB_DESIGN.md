@@ -1,7 +1,7 @@
 # eADSB2000 設計書：ADS-B受信システム＆シミュレータ
 
 作成日：2026-10-13（日本時間）  
-対象：[eNMEA2000](https://github.com/UeEmon/eNMEA2000)（NMEA0183/AIS）の構成を流用したADS-B（1090ES）受信・模擬環境。本リポジトリ eADS-B2000 は独立して動作し、eNMEA2000本体へはTCPで連接します。  
+対象：[eNMEA2000](https://github.com/UeEmon/eNMEA2000)（NMEA0183/AIS）の構成を流用したADS-B（1090ES）受信・模擬環境。旧 eADS-B2000 リポジトリは eNMEA2000 の `adsb/` に統合しました。独立したComposeとして動作し、eNMEA2000本体へはTCPで連接します。  
 状態：**第2段階**（第1段階のコア実装に加え、`$PADSB` によるeNMEA2000でのネイティブ表示とDocker Compose化）。
 
 ## 1. 目的
@@ -172,7 +172,7 @@ docker compose up -d --build --wait
 | `ADSB_OUTPUTS` | tcp://host.docker.internal:10111 | 出力先（複数可、7.3節） |
 | `ENMEA_TARGET` | host.docker.internal:10111 | `ADSB_OUTPUTS` 未指定時の本体TCP（旧設定との互換用） |
 
-eNMEA2000の `bash Loop-Back.sh` は、eNMEA2000と同じ階層に本リポジトリ（`eADS-B2000`）がある場合、または `ADSB_DIR` を指定した場合に、このComposeも起動します。
+eNMEA2000の `bash Loop-Back.sh` は、このCompose（`adsb/compose.yaml`）も起動します（`ADSB_ENABLE=0` で起動しません）。
 
 受信部は入力元が切断されると5秒ごとに再接続し、転送先へは送信失敗のたびに接続し直します。
 

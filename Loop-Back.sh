@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Start everything at once: main app, NMEA emulator, AIS SDR receiver/transmit emulator and
-# eADS-B2000 (cloned next to this repository on first run; ADSB_ENABLE=0 skips ADS-B).
+# ADS-B (adsb/, formerly the eADS-B2000 repository; ADSB_ENABLE=0 skips ADS-B).
 # Prints the admin tokens at the end (SHOW_TOKENS=0 hides them).
 set -Eeuo pipefail
 # Real RTL-SDR (optional; one dongle per band, so AIS and ADS-B together need two):
@@ -9,7 +9,7 @@ set -Eeuo pipefail
 # Host ports 1235/1236 belong to the AIS and ADS-B transmit emulators.
 # Extra outputs besides the main app (kept on re-run, also editable in the SDR receiver UI):
 #   AIS_OUTPUTS=udp://192.168.1.30:10110,tcp://192.168.1.31:10111   (AIS NMEA to iPads etc.)
-#   ADSB_OUTPUTS=tcp://host.docker.internal:10111,udp://192.168.1.30:10110   ($PADSB to iPads too; read by eADS-B2000)
+#   ADSB_OUTPUTS=tcp://host.docker.internal:10111,udp://192.168.1.30:10110   ($PADSB to iPads too; read by adsb/)
 AIS_OUTPUTS="${AIS_OUTPUTS:-}"
 AIS_RTL_TCP="${AIS_RTL_TCP:-}"
 ADSB_RTL_TCP="${ADSB_RTL_TCP:-}"
@@ -45,7 +45,7 @@ compose_in() (
 )
 
 # Validate every project's own .env before starting any of the stacks.
-for project in . emulator sdr sdr-tx; do
+for project in . emulator sdr sdr-tx adsb; do
   phase="$project のCompose設定確認"
   compose_in "$project" config --quiet
 done
@@ -64,29 +64,16 @@ if [ -z "$AIS_RTL_TCP" ]; then
   compose_in sdr-tx exec -T modulator python - transmitter-start < scripts/configure-sdr-chain.py
 fi
 
-# eADS-B2000 (github.com/UeEmon/eADS-B2000) next to this repository, or ADSB_DIR=/path.
-# Cloned automatically when missing. Its receiver sends $PADSB to TCP 10111.
-ADSB_DIR="${ADSB_DIR:-$ROOT/../eADS-B2000}"
-ADSB_REPO="${ADSB_REPO:-https://github.com/UeEmon/eADS-B2000.git}"
+# ADS-B (adsb/): simulator -> transmit emulator -> receiver -> $PADSB to TCP 10111.
 adsb_started=''
-if [ "${ADSB_ENABLE:-1}" != 0 ] && [ ! -e "$ADSB_DIR" ]; then
-  phase='ADS-B（eADS-B2000）の取得'
-  if command -v git >/dev/null; then
-    printf '\n取得中: %s → %s\n' "$ADSB_REPO" "$ADSB_DIR"
-    git clone --depth 1 "$ADSB_REPO" "$ADSB_DIR"
-  else
-    printf 'gitがないためeADS-B2000を取得できません。ADS-Bは起動しません。\n' >&2
-  fi
-fi
-if [ "${ADSB_ENABLE:-1}" != 0 ] && [ -f "$ADSB_DIR/compose.yaml" ]; then
-  phase='ADS-B（eADS-B2000）の起動'
-  printf '\n起動中: %s\n' "$ADSB_DIR"
+if [ "${ADSB_ENABLE:-1}" != 0 ]; then
+  phase='ADS-Bの起動'
+  printf '\n起動中: adsb\n'
   if [ -n "$ADSB_RTL_TCP" ]; then
     # Real dongle: only the receiver, reading I/Q from rtl_tcp.
-    (cd "$ADSB_DIR" && ADSB_INPUT=--rtltcp ADSB_SOURCE="$ADSB_RTL_TCP" \
-      docker compose -f compose.yaml up -d --build --wait --no-deps receiver)
+    ADSB_INPUT=--rtltcp ADSB_SOURCE="$ADSB_RTL_TCP" compose_in adsb up -d --build --wait --no-deps receiver
   else
-    (cd "$ADSB_DIR" && docker compose -f compose.yaml up -d --build --wait)
+    compose_in adsb up -d --build --wait
   fi
   adsb_started=1
 fi
@@ -108,10 +95,8 @@ if [ -n "$adsb_started" ] && [ -n "$ADSB_RTL_TCP" ]; then
 elif [ -n "$adsb_started" ]; then
   printf 'ADS-B: シミュレータ → SDR送信模擬部（RTL-TCP:1236）→ ADS-B受信部 → $PADSB TCP:10111 → 本体。航空機は地図に表示されます。\n'
   printf '  ADS-Bシミュレータ http://localhost:8091  (複数機の諸元を一括設定)\n'
-elif [ "${ADSB_ENABLE:-1}" = 0 ]; then
-  printf 'ADS-B環境は起動していません（ADSB_ENABLE=0）。\n'
 else
-  printf 'ADS-B環境は未起動です。%s にeADS-B2000がありません。\n' "$ADSB_DIR"
+  printf 'ADS-B環境は起動していません（ADSB_ENABLE=0）。\n'
 fi
 
 if [ "${SHOW_TOKENS:-1}" != 0 ]; then

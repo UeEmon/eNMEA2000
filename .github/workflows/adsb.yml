@@ -1,9 +1,16 @@
-name: test
+name: ADS-B
 on:
   push:
-    branches: [main]
+    branches: [main, codex/**]
+    paths: ['adsb/**', '.github/workflows/adsb.yml']
   pull_request:
-    branches: [main]
+    paths: ['adsb/**', '.github/workflows/adsb.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    working-directory: adsb
 jobs:
   python:
     runs-on: ubuntu-latest

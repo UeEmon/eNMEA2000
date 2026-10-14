@@ -28,6 +28,7 @@ NMEA0183/AISをUDP・TCPでリアルタイム受信し、またはファイル�
 | NMEAエミュレータ | 独立Web、GIS航路操作、GPS/AIS生成、TCP/UDP外部出力 | `emulator/server.py`、`emulator/ais_suite.py` |
 | SDR送信模擬部 | NMEA AISをGMSK変調、RTL-TCP I/Q配信、CU8ファイル生成 | `sdr-tx/server.py`、`sdr-tx/modulator.py` |
 | SDR受信部 | AIS-catcherによる復調、NMEA検証・ログ・TCP/UDP配信、管理Web | `sdr/engine.py`、`sdr/core.py`、`sdr/service.py` |
+| ADS-B（`adsb/`、旧eADS-B2000） | ADS-Bシミュレータ（複数機・Web 8091）、ADS-B送信模擬部（PPM I/Q 1236）、ADS-B受信部（`$PADSB`をTCP 10111へ） | `adsb/adsb/simulator.py`、`adsb/adsb/sdrtx.py`、`adsb/adsb/receiver.py` |
 | iPad | Swift受信・解析・SQLite、SwiftUI、同梱CesiumをWKWebViewで描画 | `ipad/App/`、`ipad/Sources/` |
 | AWS配備 | ECR、EC2、ALB、EBS、Secrets Manager、CloudWatch、SSM | `aws/deploy.py`、`aws/cloudformation.json`、`aws/bootstrap.sh` |
 
@@ -41,9 +42,12 @@ flowchart TD
  A --> D["PostgreSQL"]
  A --> G["Cesium / WebSocket"]
  T --> F["CU8 I/Qファイル"]
+ S["ADS-Bシミュレータ"] -->|AVR 30002| U["ADS-B送信模擬部"]
+ U -->|RTL-TCP I/Q 1236| V["ADS-B受信部"]
+ V -->|$PADSB TCP 10111| A
 ```
 
-4つのComposeプロジェクトは独立しています。連接は共有Dockerネットワークではなく `host.docker.internal` とホスト公開ポートを通ります。SDR受信部内部の `ais-receiver → nmea-router` は内部UDP 10112で接続します。
+5つのComposeプロジェクト（本体、エミュレータ、SDR受信部、SDR送信模擬部、ADS-B）は独立しています。連接は共有Dockerネットワークではなく `host.docker.internal` とホスト公開ポートを通ります。SDR受信部内部の `ais-receiver → nmea-router` は内部UDP 10112で接続します。
 
 **SDR送信模擬部はソフトウェアI/Qを出力し、RF送信機・アンテナへ出力しません。** GPSセンテンスはAIS変調対象ではありません。AIVDOを変調した場合も復調後は他船AIVDMになるため、自己位置の試験には直接NMEA入力を使います。
 
