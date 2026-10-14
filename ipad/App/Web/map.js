@@ -12,6 +12,12 @@ viewer.camera.setView({destination:Cesium.Cartesian3.fromDegrees(139.7,35.5,9000
 let tracks = [], followOwn = false;
 const ownId = "__own__";
 const standardSelect = document.getElementById('standard');
+// Aircraft (ADS-B $PADSB) are their own platform, never AIS: callsign and flight level like the main app.
+function trackLabel(t) {
+ if(!t.aircraft) return t.fields.shipname||t.mmsi;
+ const alt=Number(t.fields.altitude_ft);
+ return (t.fields.callsign||t.mmsi)+(t.fields.altitude_ft!==undefined&&Number.isFinite(alt)?' FL'+String(Math.round(alt/100)).padStart(3,'0'):'');
+}
 NmeaSymbols.bind(standardSelect,()=>{});
 window.renderTracks = (items, options) => {
  tracks = items; followOwn = Boolean(options.followOwn && options.own);
@@ -22,11 +28,11 @@ window.renderTracks = (items, options) => {
  for(const entity of [...viewer.entities.values]) if(!ids.has(entity.id.replace(/^trail:/,''))) viewer.entities.remove(entity);
  for(const t of items) {
   const selected = t.mmsi === options.selected;
-  const graphics = NmeaSymbols.graphics({own:t.fields.own==='true',watched:t.watched,selected});
+  const graphics = NmeaSymbols.graphics({own:t.fields.own==='true',watched:t.watched,selected,platform:t.aircraft?'aircraft':'ship'});
   let e = viewer.entities.getById(t.mmsi);
   if(!e) e = viewer.entities.add({id:t.mmsi});
   e.position=Cesium.Cartesian3.fromDegrees(t.lon,t.lat); e.billboard=graphics.billboard;
-  e.label={text:t.fields.shipname||t.mmsi,font:'12px sans-serif',fillColor:Cesium.Color.WHITE,showBackground:true,pixelOffset:new Cesium.Cartesian2(0,28),distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,2000000)};
+  e.label={text:trackLabel(t),font:'12px sans-serif',fillColor:Cesium.Color.WHITE,showBackground:true,pixelOffset:new Cesium.Cartesian2(0,28),distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,2000000)};
   const trailId='trail:'+t.mmsi;
   const oldTrail=viewer.entities.getById(trailId); if(oldTrail) viewer.entities.remove(oldTrail);
   if(selected && t.trail.length>1) viewer.entities.add({id:trailId,polyline:{positions:Cesium.Cartesian3.fromDegreesArray(t.trail.flat()),width:2,material:Cesium.Color.CYAN}});
@@ -52,7 +58,8 @@ viewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEF
 const menu=document.getElementById('quickMenu');
 let menuMmsi;
 function showMenu(mmsi,point) {
- menuMmsi=mmsi; document.getElementById('menuTitle').textContent=tracks.find(t=>t.mmsi===mmsi)?.fields.shipname||mmsi;
+ menuMmsi=mmsi; const track=tracks.find(t=>t.mmsi===mmsi); document.getElementById('menuTitle').textContent=track?trackLabel(track):mmsi;
+ document.getElementById('menuWatch').hidden=Boolean(track?.aircraft); // watch list is keyed by MMSI/IMO
  menu.hidden=false; menu.style.left=Math.min(point.x,window.innerWidth-200)+'px'; menu.style.top=Math.min(point.y,window.innerHeight-155)+'px';
 }
 for(const [id,action] of [['menuSelect','select'],['menuWatch','watch']]) document.getElementById(id).addEventListener('click',()=>{send({action,mmsi:menuMmsi});menu.hidden=true;});

@@ -53,12 +53,12 @@ public final class NMEAStore {
    let watchList = try watches()
    var own = try ownState()
    for e in events {
-    try run("INSERT INTO events VALUES(?,?,?,?)",[e.id,String(e.time.timeIntervalSince1970),e.mmsi ?? "",try json(e)])
+    try run("INSERT INTO events VALUES(?,?,?,?)",[e.id,String(e.time.timeIntervalSince1970),e.trackKey ?? "",try json(e)])
     own.consume(e)
-    guard e.kind != "VDO", e.status == "ok", let mmsi = e.mmsi else { continue }
+    guard e.kind != "VDO", e.status == "ok", let mmsi = e.trackKey else { continue }
     var identity: [String:String] = [:]
     if let row = try rows("SELECT payload FROM identities WHERE mmsi=?",[mmsi]).first { identity = try decode(row[0],as:[String:String].self) }
-    for (k,v) in e.fields where !v.isEmpty && (k == "shipname" || k == "callsign" || k == "imo" || k == "ship_type") {
+    for (k,v) in e.fields where !v.isEmpty && (k == "shipname" || k == "callsign" || k == "imo" || k == "ship_type" || k == "category") {
      if k == "imo" && (Int(v) ?? 0) == 0 { continue }; identity[k] = v
     }
     try run("INSERT OR REPLACE INTO identities VALUES(?,?)",[mmsi,try json(identity)])
@@ -104,7 +104,7 @@ public final class NMEAStore {
    let e = try decode(row[1],as:Event.self), mmsi = row[0]
    var fields = e.fields; fields.merge(identities[mmsi] ?? [:],uniquingKeysWith: { _,new in new })
    let trail = try (mmsi == selected ? recentEvents(limit:100,mmsi:mmsi) : []).reversed().compactMap { e -> [Double]? in guard let lat = e.latitude, let lon = e.longitude else { return nil }; return [lon,lat] }
-   return Track(mmsi:mmsi,lat:e.latitude!,lon:e.longitude!,fields:fields,watched:list.contains { $0.mmsi == mmsi || (!$0.imo.isEmpty && $0.imo == fields["imo"]) },trail:trail)
+   return Track(mmsi:mmsi,lat:e.latitude!,lon:e.longitude!,fields:fields,watched:list.contains { $0.mmsi == mmsi || (!$0.imo.isEmpty && $0.imo == fields["imo"]) },trail:trail,aircraft:fields["icao"] != nil)
   }.filter { $0.mmsi != own.mmsi && $0.fields["own"] != "true" }
  }
  public func clearReceived() throws {

@@ -40,6 +40,16 @@ const {chromium}=require('../../browser-tests/node_modules/playwright');
   await page.mouse.click(point.x,point.y,{button:'right'});
   await page.getByRole('menuitem',{name:'監視対象に登録'}).click();
   await page.waitForFunction(()=>window.messages.some(m=>m.action==='watch'&&m.mmsi==='123456789'));
+  // ADS-B aircraft are their own platform: aircraft symbol, callsign + FL label, no MMSI watch entry.
+  const withAircraft=[...tracks,{mmsi:'86D3A1',lat:35.6,lon:139.8,fields:{callsign:'JAL123',altitude_ft:'12500'},watched:false,trail:[],aircraft:true}];
+  await page.evaluate(({withAircraft})=>window.renderTracks(withAircraft,{selected:'123456789',standard:'2525'}),{withAircraft});
+  await page.waitForTimeout(500);
+  const plane=await page.evaluate(()=>{const e=viewer.entities.getById('86D3A1'),p=Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene,e.position.getValue(viewer.clock.currentTime));
+   return {label:e.label.text.getValue(),image:e.billboard.image.getValue().toDataURL(),ship:viewer.entities.getById('123456789').billboard.image.getValue().toDataURL(),x:p.x,y:p.y};});
+  if(plane.label!=='JAL123 FL125'||plane.image===plane.ship)throw Error('Aircraft label/symbol: '+plane.label);
+  await page.mouse.click(plane.x,plane.y,{button:'right'});
+  if(await page.getByRole('menuitem',{name:'監視対象に登録'}).isVisible())throw Error('Aircraft must not offer MMSI watch registration');
+  await page.keyboard.press('Escape');
   // Own position remains at the GIS center even when selecting/focusing another target.
   for(const standard of ['2525','APP6']) for(const ownPlatform of ['ship','aircraft']) {
    await page.evaluate(({tracks,standard,ownPlatform})=>window.renderTracks(tracks,{selected:'123456789',standard,ownPlatform,followOwn:true,own:{lat:35.4,lon:139.6,kind:'VDO'}}),{tracks,standard,ownPlatform});

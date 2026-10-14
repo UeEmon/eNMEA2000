@@ -72,14 +72,14 @@ struct ContentView: View {
     Divider()
     ScrollView {
      VStack(alignment:.leading,spacing:12) {
-      HStack { Text(track.fields["shipname"] ?? "船舶詳細").font(.headline); Spacer(); Button { model.selected = nil } label: { Image(systemName:"xmark.circle") } }
-      Text("MMSI \(track.mmsi)").font(.system(.body,design:.monospaced))
+      HStack { Text(track.aircraft ? track.fields["callsign"] ?? "航空機詳細" : track.fields["shipname"] ?? "船舶詳細").font(.headline); Spacer(); Button { model.selected = nil } label: { Image(systemName:"xmark.circle") } }
+      Text("\(track.aircraft ? "ICAO" : "MMSI") \(track.mmsi)").font(.system(.body,design:.monospaced))
       Text(String(format:"緯度 %.6f / 経度 %.6f",track.lat,track.lon)).font(.caption)
       if let relative = model.selectedBearingDistance {
        LabeledContent("自己位置からの方位（真方位）",value:relative.bearingText)
        LabeledContent("自己位置からの距離",value:String(format:"%.2f NM",relative.distanceNM))
       } else { Text("自己位置未受信：方位・距離を計算できません").font(.caption).foregroundStyle(.secondary) }
-      Button("監視対象に登録",systemImage:"binoculars") { model.register(track.mmsi) }.buttonStyle(.bordered)
+      if !track.aircraft { Button("監視対象に登録",systemImage:"binoculars") { model.register(track.mmsi) }.buttonStyle(.bordered) }
       ForEach(track.fields.keys.sorted(),id:\.self) { k in VStack(alignment:.leading) { Text(k).font(.caption).foregroundStyle(.secondary); Text(track.fields[k] ?? "").textSelection(.enabled) } }
       Divider(); Text("航跡（最大100受信分）").font(.headline)
       ForEach(Array(track.trail.enumerated()),id:\.offset) { _,p in Text(String(format:"%.6f, %.6f",p[1],p[0])).font(.caption.monospaced()) }
@@ -92,7 +92,7 @@ struct ContentView: View {
   List(model.events) { e in DisclosureGroup {
    Text(e.raw).font(.caption.monospaced()).textSelection(.enabled)
    ForEach(e.fields.keys.sorted(),id:\.self) { k in LabeledContent(k,value:e.fields[k] ?? "") }
-  } label: { HStack { VStack(alignment:.leading) { Text(e.aisType.map { "AIS Type \($0)" } ?? e.kind); Text(e.mmsi ?? e.source).font(.caption).foregroundStyle(.secondary) }; Spacer(); Text(e.status).foregroundStyle(e.status == "error" ? .red : .secondary); Text(e.time,style:.time).font(.caption) } } }
+  } label: { HStack { VStack(alignment:.leading) { Text(e.aisType.map { "AIS Type \($0)" } ?? (e.kind == "ADSB" ? "ADS-B" : e.kind)); Text(e.trackKey ?? e.source).font(.caption).foregroundStyle(.secondary) }; Spacer(); Text(e.status).foregroundStyle(e.status == "error" ? .red : .secondary); Text(e.time,style:.time).font(.caption) } } }
  }
  private var watchPage: some View {
   List {
