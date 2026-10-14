@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Start the main application and all three standalone test/receiver stacks.
+# Start everything at once: main app, NMEA emulator, AIS SDR receiver/transmit emulator and
+# eADS-B2000 (cloned next to this repository on first run; ADSB_ENABLE=0 skips ADS-B).
+# Prints the admin tokens at the end (SHOW_TOKENS=0 hides them).
 set -Eeuo pipefail
 # Real RTL-SDR (optional; one dongle per band, so AIS and ADS-B together need two):
 #   AIS_RTL_TCP=host.docker.internal:1234   rtl_tcp -a 0.0.0.0 -p 1234 -f 162000000 -s 1536000 -d 0
@@ -62,11 +64,21 @@ if [ -z "$AIS_RTL_TCP" ]; then
   compose_in sdr-tx exec -T modulator python - transmitter-start < scripts/configure-sdr-chain.py
 fi
 
-# Optional: eADS-B2000 (github.com/UeEmon/eADS-B2000) checked out next to this repository,
-# or ADSB_DIR=/path/to/eADS-B2000. Its receiver sends $PADSB to TCP 10111.
+# eADS-B2000 (github.com/UeEmon/eADS-B2000) next to this repository, or ADSB_DIR=/path.
+# Cloned automatically when missing. Its receiver sends $PADSB to TCP 10111.
 ADSB_DIR="${ADSB_DIR:-$ROOT/../eADS-B2000}"
+ADSB_REPO="${ADSB_REPO:-https://github.com/UeEmon/eADS-B2000.git}"
 adsb_started=''
-if [ -f "$ADSB_DIR/compose.yaml" ]; then
+if [ "${ADSB_ENABLE:-1}" != 0 ] && [ ! -e "$ADSB_DIR" ]; then
+  phase='ADS-B（eADS-B2000）の取得'
+  if command -v git >/dev/null; then
+    printf '\n取得中: %s → %s\n' "$ADSB_REPO" "$ADSB_DIR"
+    git clone --depth 1 "$ADSB_REPO" "$ADSB_DIR"
+  else
+    printf 'gitがないためeADS-B2000を取得できません。ADS-Bは起動しません。\n' >&2
+  fi
+fi
+if [ "${ADSB_ENABLE:-1}" != 0 ] && [ -f "$ADSB_DIR/compose.yaml" ]; then
   phase='ADS-B（eADS-B2000）の起動'
   printf '\n起動中: %s\n' "$ADSB_DIR"
   if [ -n "$ADSB_RTL_TCP" ]; then
@@ -96,6 +108,14 @@ if [ -n "$adsb_started" ] && [ -n "$ADSB_RTL_TCP" ]; then
 elif [ -n "$adsb_started" ]; then
   printf 'ADS-B: シミュレータ → SDR送信模擬部（RTL-TCP:1236）→ ADS-B受信部 → $PADSB TCP:10111 → 本体。航空機は地図に表示されます。\n'
   printf '  ADS-Bシミュレータ http://localhost:8091  (複数機の諸元を一括設定)\n'
+elif [ "${ADSB_ENABLE:-1}" = 0 ]; then
+  printf 'ADS-B環境は起動していません（ADSB_ENABLE=0）。\n'
 else
-  printf 'ADS-B環境は未起動です。eADS-B2000を本リポジトリと同じ階層に取得するか、ADSB_DIRを指定して再実行してください。\n'
+  printf 'ADS-B環境は未起動です。%s にeADS-B2000がありません。\n' "$ADSB_DIR"
+fi
+
+if [ "${SHOW_TOKENS:-1}" != 0 ]; then
+  bash "$ROOT/scripts/show-tokens.sh"
+else
+  printf '\n管理トークンは bash scripts/show-tokens.sh で表示できます。\n'
 fi
