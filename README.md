@@ -54,6 +54,8 @@ bash Loop-Back.sh
 ```
 
 既に取得済みなら、リポジトリ内で `git pull --ff-only` の後に `bash Loop-Back.sh` を実行します。
+AISとADS-Bをすべて一度に起動します。ADS-B（[eADS-B2000](https://github.com/UeEmon/eADS-B2000)）は、本リポジトリと同じ階層になければ初回に自動で取得します（`git` が必要。`ADSB_ENABLE=0` でADS-Bを起動しません）。
+起動完了後に、各画面の管理トークン（`APP_TOKEN`、`SDR_TOKEN`、`SDR_TX_TOKEN`）を表示します。あとから確認するときは `bash scripts/show-tokens.sh` を実行します。表示したくない場合は `SHOW_TOKENS=0 bash Loop-Back.sh` とします。
 ホストへのPython・Node.jsのインストールは不要です。初回はビルドに時間がかかります。
 本体（DBを含む）、NMEAエミュレータ、SDR受信部、SDR送信模擬部の4環境を起動し、起動完了を待ちます。
 不足する `.env`、`sdr/.env`、`sdr-tx/.env` だけを生成し、既存の秘密情報・保存データは保持します。再実行も可能です。
@@ -311,7 +313,7 @@ $PADSB,86D3A1,JAL123,35.549400,139.779800,12500,420.0,287.0,-1472,3*hh
 - 緯度経度は符号付きの度です（NMEAの度分形式ではありません）。不明な項目は空欄にします。チェックサムは必須です。
 - DBの `events` テーブルに `icao` 列を追加しました。既存のDBには起動時に列を自動で追加し、保存データはそのまま残ります。API `GET /api/events?icao=86D3A1`（大文字16進6桁）で絞り込めます。
 - 地図では航空機シンボル（MIL-STD-2525D／APP-6Dの航空）に「呼出符号 FL高度」を表示します。クリックすると、右側にICAO・高度・速度・航跡・昇降率を表示します。航跡はICAO単位でまとめます。
-- `bash Loop-Back.sh` は、本リポジトリと同じ階層に `eADS-B2000` がある場合（または `ADSB_DIR` を指定した場合）に、ADS-B環境も起動します。
+- `bash Loop-Back.sh` はADS-B環境も起動します。eADS-B2000は本リポジトリと同じ階層（または `ADSB_DIR`）になければ自動で取得します。
 - eADS-B2000の既定経路は、シミュレータ → ADS-B用SDR送信模擬部（RTL-TCP 1236）→ ADS-B受信部 → `$PADSB` → 本体（TCP 10111）です。
 
 ## 実機RTL-SDRで受信（Loop-Back.sh）
