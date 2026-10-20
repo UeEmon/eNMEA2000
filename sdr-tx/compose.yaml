@@ -9,7 +9,7 @@ services:
     environment:
       SDR_TX_TOKEN: ${SDR_TX_TOKEN:?Run python3 sdr-tx/setup.py first}
     ports:
-      - '${SDR_TX_WEB_BIND:-127.0.0.1}:18083:80'
+      - '${SDR_TX_WEB_BIND:-127.0.0.1}:${SDR_TX_WEB_PORT:-18083}:80'
       - '${SDR_TX_DATA_BIND:-0.0.0.0}:10113:10113/tcp'
       - '${SDR_TX_DATA_BIND:-0.0.0.0}:10113:10113/udp'
       - '${SDR_TX_DATA_BIND:-0.0.0.0}:1235:1235/tcp'

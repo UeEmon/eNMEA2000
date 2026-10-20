@@ -1,5 +1,6 @@
 """Docker integration: HTTP auth, engine file lifecycle, NMEA TCP/UDP fan-out."""
 import json
+import os
 import sys
 import socket
 import subprocess
@@ -11,7 +12,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 TOKEN = next(l.split('=',1)[1] for l in (ROOT/'.env').read_text().splitlines() if l.startswith('SDR_TOKEN='))
-BASE = 'http://127.0.0.1:18082'
+PORT = os.environ.get('SDR_WEB_PORT') or next((l.split('=',1)[1] for l in (ROOT/'.env').read_text().splitlines() if l.startswith('SDR_WEB_PORT=')), '18082')
+BASE = f'http://127.0.0.1:{PORT}'
 
 
 def api(path, data=None):

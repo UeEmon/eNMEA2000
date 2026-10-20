@@ -1,6 +1,7 @@
 """Existing emulator -> modulator -> RTL-TCP -> receiver -> main DB/REST."""
 import http.cookiejar
 import json
+import os
 import time
 import sys
 import urllib.request
@@ -10,14 +11,18 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def secret(path,key):return next(l.split('=',1)[1] for l in path.read_text().splitlines() if l.startswith(key+'='))
 TX=secret(ROOT/'sdr-tx/.env','SDR_TX_TOKEN');RX=secret(ROOT/'sdr/.env','SDR_TOKEN')
+def port(path,key,default):
+    try:return int(os.environ.get(key) or secret(path,key))
+    except StopIteration:return default
+TX_PORT=port(ROOT/'sdr-tx/.env','SDR_TX_WEB_PORT',18083);RX_PORT=port(ROOT/'sdr/.env','SDR_WEB_PORT',18082)
 client=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 def request(port,path,data=None,token=None):
     headers={'Content-Type':'application/json'}
-    if token:headers['X-SDR-TX-Token' if port==18083 else 'X-SDR-Token']=token
+    if token:headers['X-SDR-TX-Token' if port==TX_PORT else 'X-SDR-Token']=token
     req=urllib.request.Request(f'http://127.0.0.1:{port}'+path,data=None if data is None else json.dumps(data).encode(),headers=headers)
     with client.open(req,timeout=20) as r:return json.load(r)
-def tx(path,data=None):return request(18083,'/api/'+path,data,TX)
-def rx(path,data=None):return request(18082,'/api/'+path,data,RX)
+def tx(path,data=None):return request(TX_PORT,'/api/'+path,data,TX)
+def rx(path,data=None):return request(RX_PORT,'/api/'+path,data,RX)
 def app(path,data=None):return request(18081,'/api/'+path,data)
 def emu(path,data=None):return request(8090,'/api/'+path,data)
 def wait(fn):
@@ -27,7 +32,7 @@ def wait(fn):
         time.sleep(.15)
 
 def main():
-    try:request(18083,'/api/config');raise AssertionError('Anonymous management allowed')
+    try:request(TX_PORT,'/api/config');raise AssertionError('Anonymous management allowed')
     except urllib.error.HTTPError as e:assert e.code==401
     app('login',{'token':secret(ROOT/'.env','APP_TOKEN')})
     if '--launcher' in sys.argv:
