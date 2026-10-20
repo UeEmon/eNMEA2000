@@ -181,6 +181,7 @@ CI成果物はシミュレータ用 `.app` で、実機へ直接導入できるI
 | 本体履歴・ファイル・出力 | `/api/events`、`/api/files`、`/api/jobs`、`/api/export/{fmt}`、`/ws` |
 | 監視管理・通知・選択位置 | `/api/watchlist`、`/api/watch-alerts`、`/api/vessels/{mmsi}/position` |
 | 履歴削除 | `DELETE /api/data`、確認文字列とexpected_total必須 |
+| 保存期間・自動削除 | `GET`/`PUT /api/retention`、初期値24時間・自動削除有効 |
 | エミュレータ出力・AIS送信 | `/api/output`、`/api/ais/send` |
 | SDR受信・送信管理 | `/api/config`、`/api/status`、`/api/start`、`/api/stop` |
 

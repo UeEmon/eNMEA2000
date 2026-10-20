@@ -30,6 +30,7 @@ class Store:
             Column('received_at', String(40), nullable=False), Column('source', String(180)),
             Column('mmsi', String(9)), Column('imo', String(7)), Column('name', String(120)),
             Column('matched_by', String(12)))
+        self.settings = Table('settings', meta, Column('key', String(64), primary_key=True), Column('value', Text))
         meta.create_all(self.engine)
         if 'icao' not in {c['name'] for c in inspect(self.engine).get_columns('events')}:
             # Databases created before ADS-B support: add the column in place, keep all rows.
@@ -139,6 +140,31 @@ class Store:
 
     def load_jobs(self):
         with self.engine.connect() as c: return [json.loads(r.payload) for r in c.execute(select(self.jobs))]
+
+    def get_setting(self, key, default=None):
+        with self.engine.connect() as c:
+            row = c.execute(select(self.settings.c.value).where(self.settings.c.key == key)).first()
+        return json.loads(row.value) if row else default
+
+    def set_setting(self, key, value):
+        with self.engine.begin() as c:
+            c.execute(self.settings.delete().where(self.settings.c.key == key))
+            c.execute(self.settings.insert().values(key=key, value=json.dumps(value)))
+
+    def purge(self, cutoff, chunk=5000):
+        """Delete events and watch alerts received before cutoff (ISO UTC); watchlist and identities stay."""
+        stamp = cutoff.isoformat()
+        events = 0
+        while True:
+            # Small transactions keep ingest writes from waiting on one long delete.
+            with self.engine.begin() as c:
+                ids = select(self.events.c.id).where(self.events.c.received_at < stamp).limit(chunk).scalar_subquery()
+                deleted = c.execute(self.events.delete().where(self.events.c.id.in_(ids))).rowcount
+            events += deleted
+            if deleted < chunk: break
+        with self.engine.begin() as c:
+            alerts = c.execute(self.alerts.delete().where(self.alerts.c.received_at < stamp)).rowcount
+        return {'events_deleted': events, 'alerts_deleted': alerts}
 
     def clear(self):
         """Remove stored events and import job metadata in one transaction; retain schema."""
