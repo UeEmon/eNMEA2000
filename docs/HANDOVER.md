@@ -99,8 +99,8 @@ bash Loop-Back.sh
 |---|---|---|---|
 | 本体Web | 127.0.0.1:18081/TCP | 80 | `.env` の `APP_TOKEN` |
 | NMEAエミュレータWeb | 127.0.0.1:8090/TCP | 8090 | ログイントークンなし |
-| SDR受信管理Web | 127.0.0.1:18082/TCP | 80 | `sdr/.env` の `SDR_TOKEN` |
-| SDR送信模擬Web | 127.0.0.1:18083/TCP | 80 | `sdr-tx/.env` の `SDR_TX_TOKEN` |
+| SDR受信管理Web | 127.0.0.1:18082/TCP（`SDR_WEB_PORT`） | 80 | `sdr/.env` の `SDR_TOKEN` |
+| SDR送信模擬Web | 127.0.0.1:18083/TCP（`SDR_TX_WEB_PORT`） | 80 | `sdr-tx/.env` の `SDR_TX_TOKEN` |
 | 本体NMEA入力 | 0.0.0.0:10110/UDP、10111/TCP | 同番号 | トークン認証なし、CIDR制限あり |
 | 変調用NMEA入力 | 0.0.0.0:10113/TCP・UDP | 10113 | データポート認証なし |
 | 模擬I/Q出力 | 0.0.0.0:1235/TCP | 1235 | データポート認証なし、受信接続1台 |

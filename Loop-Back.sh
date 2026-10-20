@@ -78,12 +78,16 @@ if [ "${ADSB_ENABLE:-1}" != 0 ]; then
   adsb_started=1
 fi
 
-printf '\n全環境の起動が完了しました。既定の接続先:\n'
+# Web ports: the shell environment wins over each project's .env, as in docker compose.
+env_port() { local v="${!2:-}"; [ -n "$v" ] || v="$(sed -n "s/^$2=//p" "$ROOT/$1" 2>/dev/null | tail -n 1)"; printf '%s' "${v:-$3}"; }
+sdr_port="$(env_port sdr/.env SDR_WEB_PORT 18082)"
+sdr_tx_port="$(env_port sdr-tx/.env SDR_TX_WEB_PORT 18083)"
+printf '\n全環境の起動が完了しました。接続先:\n'
 printf '  本体             http://localhost:18081  (.env の APP_TOKEN)\n'
 printf '  NMEAエミュレータ http://localhost:8090\n'
-printf '  SDR受信部        http://localhost:18082  (sdr/.env の SDR_TOKEN)\n'
-printf '  SDR送信模擬部    http://localhost:18083  (sdr-tx/.env の SDR_TX_TOKEN)\n'
-printf 'ポートを変更済みの場合は各Compose設定の公開ポートを使用してください。\n'
+printf '  SDR受信部        http://localhost:%s  (sdr/.env の SDR_TOKEN)\n' "$sdr_port"
+printf '  SDR送信模擬部    http://localhost:%s  (sdr-tx/.env の SDR_TX_TOKEN)\n' "$sdr_tx_port"
+printf '他のアプリとポートが衝突する場合は sdr/.env の SDR_WEB_PORT、sdr-tx/.env の SDR_TX_WEB_PORT で変更できます。\n'
 if [ -n "$AIS_RTL_TCP" ]; then
   printf 'AIS: 実機RTL-SDR（rtl_tcp %s, 162 MHz）→ SDR受信部 → TCP:10111 → 本体。SDR受信は開始済みです。\n' "$AIS_RTL_TCP"
 else

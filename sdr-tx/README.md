@@ -21,7 +21,7 @@ python3 sdr-tx/setup.py
 docker compose --env-file sdr-tx/.env -f sdr-tx/compose.yaml up -d --build --wait
 ```
 
-送信管理画面は http://localhost:18083 。`sdr-tx/.env` の `SDR_TX_TOKEN` で接続します。コンテナ内Webは80です。8080/8888は使いません。トークンはブラウザ永続ストレージに保存しません。設定と生成済みI/QはDockerボリュームに保存します。再起動時は変調停止状態です。
+送信管理画面は http://localhost:18083 （`sdr-tx/.env` の `SDR_TX_WEB_PORT` で変更可）。`sdr-tx/.env` の `SDR_TX_TOKEN` で接続します。コンテナ内Webは80です。8080/8888は使いません。トークンはブラウザ永続ストレージに保存しません。設定と生成済みI/QはDockerボリュームに保存します。再起動時は変調停止状態です。
 
 SDR受信部も起動:
 

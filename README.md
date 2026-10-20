@@ -68,6 +68,8 @@ AISとADS-Bをすべて一度に起動します。ADS-Bは [adsb/](adsb/README.m
 | SDR受信部 | http://localhost:18082 | `sdr/.env` の `SDR_TOKEN` |
 | SDR送信模擬部 | http://localhost:18083 | `sdr-tx/.env` の `SDR_TX_TOKEN` |
 
+他のアプリが18082／18083を使っている場合は、`sdr/.env` の `SDR_WEB_PORT`、`sdr-tx/.env` の `SDR_TX_WEB_PORT` を空いている番号に変えて `bash Loop-Back.sh` を再実行します（例：`SDR_WEB_PORT=18092`、`SDR_TX_WEB_PORT=18093`）。起動完了時の表示も変更後の番号になります。
+
 起動後、次の経路を自動設定し、本体の受信、SDR受信、変調を開始します。
 
 `NMEAエミュレータ → TCP:10113 → SDR送信模擬部 → RTL-TCP:1235 → SDR受信部 → TCP:10111 → 本体`
