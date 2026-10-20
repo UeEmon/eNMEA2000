@@ -35,6 +35,7 @@ jobs:
       - run: node browser-tests/ais-smoke.js
       - run: node browser-tests/adsb-smoke.js
       - run: node browser-tests/emulator-ais-smoke.js
+      - run: node browser-tests/retention-smoke.js
       - run: node browser-tests/data-delete-smoke.js
       - run: node browser-tests/emulator-output-smoke.js
       - run: python sdr/setup.py

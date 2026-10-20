@@ -440,3 +440,42 @@ def test_padsb_over_tcp_and_icao_filter(client):
             time.sleep(.01)
     assert rows and rows[0]['icao']=='86D3A1' and rows[0]['source'].startswith('tcp:')
     assert c.get('/api/events?icao=86d3a1').status_code==422
+
+def test_store_purge_removes_only_expired_history(tmp_path):
+    from datetime import datetime, timedelta, timezone
+    from app.store import Store
+    store=Store(f'sqlite:///{tmp_path}/purge.db')
+    now=datetime.now(timezone.utc)
+    store.watch_save({'mmsi':'431000001','name':'保持'})
+    rows=[]
+    for hours in (30,25,1):
+        row=Decoder().parse(GGA,'a',(now-timedelta(hours=hours)).isoformat()); rows.append(row)
+    store.add(rows)
+    with store.engine.begin() as c:
+        c.execute(store.alerts.insert().values(watch_id=1,event_id=rows[0]['id'],received_at=rows[0]['received_at']))
+    result=store.purge(now-timedelta(hours=24),chunk=1)
+    assert result=={'events_deleted':2,'alerts_deleted':1}
+    assert [r['id'] for r in store.recent()]==[rows[2]['id']]
+    assert len(store.watchlist())==1
+    store.set_setting('retention',{'hours':6,'auto_delete':False})
+    assert store.get_setting('retention')=={'hours':6,'auto_delete':False}
+    assert store.get_setting('missing',{'x':1})=={'x':1}
+
+def test_retention_settings_default_update_and_purge(client):
+    from datetime import datetime, timedelta, timezone
+    c,main,_=client;login(c)
+    r=c.get('/api/retention').json()
+    assert r['hours']==24 and r['auto_delete'] is True
+    old=Decoder().parse(GGA,'old',(datetime.now(timezone.utc)-timedelta(hours=3)).isoformat())
+    main.state.store.add([old])
+    assert c.put('/api/retention',json={'hours':0,'auto_delete':True}).status_code==422
+    assert c.put('/api/retention',json={'hours':12,'auto_delete':True},headers={'Origin':'https://evil.example'}).status_code==403
+    r=c.put('/api/retention',json={'hours':5,'auto_delete':False}).json()
+    assert r=={'hours':5,'auto_delete':False,'last':r['last']}
+    r=c.put('/api/retention',json={'hours':2,'auto_delete':False}).json()
+    assert c.get('/api/events',params={'source':'old'}).json()  # disabled: nothing removed
+    r=c.put('/api/retention',json={'hours':2,'auto_delete':True}).json()
+    assert r['last']['events_deleted']>=1 and r['last']['run_at']
+    assert c.get('/api/events',params={'source':'old'}).json()==[]
+    assert main.state.store.get_setting('retention')=={'hours':2,'auto_delete':True}
+    c.put('/api/retention',json={'hours':24,'auto_delete':True})

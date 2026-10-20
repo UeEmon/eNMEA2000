@@ -6,6 +6,7 @@ import ipaddress
 import json
 import logging
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import secrets
 import time
@@ -29,6 +30,9 @@ SECURE = os.getenv('COOKIE_SECURE', 'false').lower() == 'true'
 UDP_PORT = int(os.getenv('UDP_PORT', '10110'))
 TCP_PORT = int(os.getenv('TCP_PORT', '10111'))
 MAX_FILE = int(os.getenv('MAX_FILE_MB', '100')) * 1024 * 1024
+RETENTION_DEFAULT = {'hours': float(os.getenv('RETENTION_HOURS', '24')),
+                     'auto_delete': os.getenv('AUTO_DELETE', 'true').lower() == 'true'}
+RETENTION_INTERVAL = float(os.getenv('RETENTION_INTERVAL_SECONDS', '60'))
 ALLOW = [ipaddress.ip_network(v.strip()) for v in os.getenv('UDP_ALLOW_CIDRS', '').split(',') if v.strip()]
 
 class Runtime:
@@ -47,6 +51,8 @@ class Runtime:
         self.failed = False
         self.maintenance = False
         self.reset_lock = asyncio.Lock()
+        self.retention = dict(RETENTION_DEFAULT)
+        self.retention_last = {'run_at':None, 'events_deleted':0, 'alerts_deleted':0}
 
     def publish(self, rows):
         alerts=[a for row in rows for a in row.get('watch_alerts',[])]
@@ -136,6 +142,7 @@ async def lifespan(app):
     if len(TOKEN) < 24: raise RuntimeError('APP_TOKEN must contain at least 24 characters. Run scripts/setup.py.')
     state = Runtime()
     state.store = Store(os.getenv('DATABASE_URL', f'sqlite:///{DATA / "nmea.db"}'))
+    state.retention = {**RETENTION_DEFAULT, **await asyncio.to_thread(state.store.get_setting, 'retention', {})}
     for job in await asyncio.to_thread(state.store.load_jobs):
         if job['status'] in ('running','queued','uploading'):
             job.update(status='interrupted', error='サーバ再起動により中断。再アップロードしてください。')
@@ -145,8 +152,11 @@ async def lifespan(app):
     state.transport, _ = await loop.create_datagram_endpoint(lambda: UDP(state), local_addr=('0.0.0.0', UDP_PORT))
     state.tcp_server = await asyncio.start_server(handle_tcp, host='0.0.0.0', port=TCP_PORT, limit=16384)
     worker = asyncio.create_task(state.consume())
+    retention = asyncio.create_task(retention_loop())
     try: yield
     finally:
+        retention.cancel()
+        with contextlib.suppress(asyncio.CancelledError): await retention
         state.transport.close()
         state.tcp_server.close()
         await state.tcp_server.wait_closed()
@@ -156,6 +166,24 @@ async def lifespan(app):
         worker.cancel()
         with contextlib.suppress(asyncio.CancelledError): await worker
         state.store.engine.dispose()
+
+async def purge_expired():
+    """Delete history older than the retention period when automatic deletion is enabled."""
+    settings = state.retention
+    if not settings['auto_delete']: return None
+    async with state.reset_lock:
+        if state.maintenance: return None
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=settings['hours'])
+        result = await asyncio.to_thread(state.store.purge, cutoff)
+    state.retention_last = {'run_at':datetime.now(timezone.utc).isoformat(), **result}
+    if result['events_deleted']: log.info('Retention purge removed %s events', result['events_deleted'])
+    return result
+
+async def retention_loop():
+    while True:
+        try: await purge_expired()
+        except Exception: log.exception('Retention purge failed')
+        await asyncio.sleep(RETENTION_INTERVAL)
 
 app = FastAPI(title='NMEA Observatory', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -178,6 +206,10 @@ def origin_ok(headers):
 class DeleteRequest(BaseModel):
     confirm: str
     expected_total: int = Field(ge=0)
+
+class RetentionSettings(BaseModel):
+    hours: float = Field(ge=0.1, le=24*3650)
+    auto_delete: bool
 
 class WatchVessel(BaseModel):
     mmsi: str | None = Field(default=None,pattern=r'^[1-9][0-9]{8}$')
@@ -271,6 +303,19 @@ async def delete_data(payload: DeleteRequest):
             return {**result, 'receiving':False, 'source_files_kept':True}
         finally:
             state.maintenance = False
+
+@app.get('/api/retention')
+async def get_retention(): return {**state.retention, 'last':state.retention_last}
+
+@app.put('/api/retention')
+async def put_retention(payload: RetentionSettings):
+    settings = payload.model_dump()
+    await asyncio.to_thread(state.store.set_setting, 'retention', settings)
+    state.retention = settings
+    # Apply a shortened period right away instead of waiting for the next cycle.
+    try: await purge_expired()
+    except Exception: log.exception('Retention purge failed')
+    return {**state.retention, 'last':state.retention_last}
 
 @app.get('/api/events')
 async def events(limit: int=Query(200,ge=1,le=2000), before:int|None=None, source:str|None=None,
